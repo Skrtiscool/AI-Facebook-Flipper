@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { ensureUser } from "@/lib/ensureUser"
 import { isSchedulerRunning } from "@/services/scanner/scheduler"
+import { hasSavedSession } from "@/services/scanner/auth"
 
 export async function GET() {
   try {
@@ -21,6 +22,7 @@ export async function GET() {
 
     return NextResponse.json({
       running: isSchedulerRunning(),
+      facebookConnected: hasSavedSession(),
       lastRun: lastRun || null,
       totalDeals,
       activeAlerts: alertsCount,

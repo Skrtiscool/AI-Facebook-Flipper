@@ -14,6 +14,7 @@ import {
   Bookmark,
   Check,
   Sparkles,
+  Globe,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -23,6 +24,7 @@ import { cn } from "@/lib/utils"
 
 interface ScannerStatus {
   running: boolean
+  facebookConnected: boolean
   lastRun: { startedAt: string; listingsScanned: number; dealsFound: number } | null
   totalDeals: number
   activeAlerts: number
@@ -130,6 +132,24 @@ export default function DashboardPage() {
       </div>
 
       {/* Status card */}
+      {status && !status.facebookConnected && (
+        <Card className="border-0 bg-amber-500/10 ring-1 ring-amber-500/30">
+          <CardContent className="flex items-center gap-3 p-4">
+            <Globe className="h-5 w-5 text-amber-400 shrink-0" />
+            <div className="flex-1 text-sm">
+              <p className="font-medium text-amber-400">Facebook not connected</p>
+              <p className="text-amber-200/70">
+                Go to{" "}
+                <a href="/account" className="underline underline-offset-2">
+                  Account
+                </a>{" "}
+                to log in so the scanner can browse Marketplace.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card className={cn("glass border-0", status?.running ? "ring-1 ring-emerald-500/30" : "")}>
         <CardContent className="flex items-center gap-4 p-6">
           <div
