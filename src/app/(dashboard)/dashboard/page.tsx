@@ -55,12 +55,16 @@ export default function DashboardPage() {
   const [starting, setStarting] = useState(false)
 
   async function fetchData() {
-    const [statusRes, dealsRes] = await Promise.all([
-      fetch("/api/scanner/status"),
-      fetch("/api/deals"),
-    ])
-    if (statusRes.ok) setStatus(await statusRes.json())
-    if (dealsRes.ok) setDeals(await dealsRes.json())
+    try {
+      const [statusRes, dealsRes] = await Promise.all([
+        fetch("/api/scanner/status"),
+        fetch("/api/deals"),
+      ])
+      if (statusRes.ok) setStatus(await statusRes.json())
+      if (dealsRes.ok) setDeals(await dealsRes.json())
+    } catch {
+      // Auth might not be ready yet — retry on next interval
+    }
     setLoading(false)
   }
 
