@@ -18,6 +18,7 @@ export async function POST() {
     clearSession()
 
     const browser = await chromium.launch({
+      channel: "chrome",
       headless: false,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
     })
@@ -28,81 +29,60 @@ export async function POST() {
 
     const page = await context.newPage()
 
-    // Go directly to marketplace — if not logged in, Facebook redirects to login
+    // Go to marketplace — if you're logged in Chrome, you'll see it directly
     await page.goto("https://www.facebook.com/marketplace", {
       waitUntil: "domcontentloaded",
       timeout: 30000,
     })
 
-    // Check if we're on the login page or see a login form
-    const currentUrl = page.url()
-    const hasLoginForm = await page.evaluate(() => {
-      return !!document.querySelector('input[name="email"], #email, input[name="pass"], #pass')
-    })
+    // Wait for page to settle
+    await page.waitForTimeout(5000)
 
-    if (currentUrl.includes("login") || hasLoginForm) {
-      const fbEmail = process.env.FB_EMAIL
-      const fbPassword = process.env.FB_PASSWORD
-
-      if (fbEmail && fbPassword && hasLoginForm) {
-        // Auto-fill credentials
-        console.log("[Auth] Auto-filling credentials...")
-        await page.fill('input[name="email"], #email', fbEmail, { timeout: 5000 }).catch(() => {})
-        await page.fill('input[name="pass"], #pass', fbPassword, { timeout: 5000 }).catch(() => {})
-        await page.waitForTimeout(1000)
-
-        // Click any button that says "Log In" or submit-type button
-        await page.evaluate(() => {
-          const buttons = document.querySelectorAll('button')
-          for (const btn of buttons) {
-            if (btn.textContent?.toLowerCase().includes('log in') || btn.type === 'submit') {
-              btn.click()
-              return
-            }
-          }
-        })
-        console.log("[Auth] Login button clicked")
-
-        // Wait for URL to change away from login
-        await page.waitForFunction(
-          () => !window.location.href.includes("login") &&
-                 !document.querySelector('input[name="email"], #email, input[name="pass"], #pass'),
-          { timeout: 60000 }
-        )
-        console.log("[Auth] Login detected!")
-      } else {
-        // Manual login — wait for URL to change away from login
-        console.log("[Auth] Waiting for manual login...")
-        await page.waitForFunction(
-          () => !window.location.href.includes("login"),
-          { timeout: 300000 }
-        )
+    // Try up to 2 minutes to get logged in (manual or auto)
+    for (let i = 0; i < 40; i++) {
+      const cookies = await context.cookies()
+      const hasSession = cookies.some((c: any) => c.name === "c_user" && c.value)
+      if (hasSession) {
+        await saveCookies(context)
+        await browser.close()
+        return NextResponse.json({ message: "Facebook connected successfully" })
       }
+
+      const url = page.url()
+      const hasLoginForm = await page.evaluate(() =>
+        !!document.querySelector('input[name="email"], #email, input[name="pass"], #pass')
+      ).catch(() => false)
+
+      // Auto-fill if login form is visible and we have credentials
+      if (hasLoginForm) {
+        const fbEmail = process.env.FB_EMAIL
+        const fbPassword = process.env.FB_PASSWORD
+        if (fbEmail && fbPassword) {
+          await page.fill('input[name="email"], #email', fbEmail, { timeout: 2000 }).catch(() => {})
+          await page.fill('input[name="pass"], #pass', fbPassword, { timeout: 2000 }).catch(() => {})
+          await page.waitForTimeout(500)
+          await page.evaluate(() => {
+            const btns = document.querySelectorAll("button")
+            for (const b of btns) {
+              if (b.textContent?.toLowerCase().includes("log in") || b.type === "submit") {
+                ;(b as HTMLElement).click()
+                break
+              }
+            }
+          })
+          console.log("[Auth] Auto-filled and submitted login")
+        }
+      }
+
+      await page.waitForTimeout(3000)
+      console.log(`[Auth] Waiting for login... (${i + 1}/40)`)
     }
 
-    // Now on logged-in homepage — navigate to marketplace to trigger full session
-    await page.goto("https://www.facebook.com/marketplace", {
-      waitUntil: "domcontentloaded",
-      timeout: 30000,
-    })
-    await page.waitForTimeout(3000)
-
-    // Verify we actually have session cookies before saving
-    const cookies = await context.cookies()
-    const hasSession = cookies.some((c: any) => c.name === "c_user" && c.value)
-    if (!hasSession) {
-      console.log("[Auth] No c_user cookie found — login may have failed")
-      await browser.close()
-      return NextResponse.json(
-        { error: "Facebook login failed — no session cookie created" },
-        { status: 500 }
-      )
-    }
-
-    await saveCookies(context)
     await browser.close()
-
-    return NextResponse.json({ message: "Facebook connected successfully" })
+    return NextResponse.json(
+      { error: "Facebook login timed out" },
+      { status: 500 }
+    )
   } catch (e: any) {
     return NextResponse.json(
       { error: e?.message || "Facebook auth failed" },
