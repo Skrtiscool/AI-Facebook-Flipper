@@ -17,9 +17,22 @@ export async function loadCookies(context: BrowserContext): Promise<boolean> {
   try {
     cookies = JSON.parse(raw)
   } catch {
+    console.log("[Scanner] Invalid cookie file")
     return false
   }
   if (!Array.isArray(cookies) || cookies.length === 0) return false
+  // Must have a Facebook session cookie to be useful
+  const hasSession = cookies.some(
+    (c: any) =>
+      (c.name === "c_user" || c.name === "xs") &&
+      c.value &&
+      c.value.length > 0 &&
+      (!c.expires || c.expires > Date.now() / 1000)
+  )
+  if (!hasSession) {
+    console.log("[Scanner] Cookie file exists but no valid session cookie")
+    return false
+  }
   await context.addCookies(cookies)
   console.log("[Scanner] Facebook cookies loaded")
   return true
@@ -31,15 +44,13 @@ export function hasSavedSession(): boolean {
     const raw = fs.readFileSync(COOKIE_PATH, "utf-8")
     const cookies = JSON.parse(raw)
     if (!Array.isArray(cookies)) return false
-    // Check for a valid Facebook session cookie (c_user or xs)
-    const hasSessionCookie = cookies.some(
+    return cookies.some(
       (c: any) =>
-        c.name === "c_user" &&
+        (c.name === "c_user" || c.name === "xs") &&
         c.value &&
         c.value.length > 0 &&
         (!c.expires || c.expires > Date.now() / 1000)
     )
-    return hasSessionCookie
   } catch {
     return false
   }
@@ -58,34 +69,37 @@ export async function ensureAuthenticated(
   const page = await context.newPage()
 
   try {
+    const hadCookies = await loadCookies(context)
+
     await page.goto("https://www.facebook.com/marketplace", {
       waitUntil: "networkidle",
       timeout: 30000,
     })
 
-    const isLoggedIn = !page.url().includes("login")
+    // Check if actually logged in by looking for Marketplace-specific elements
+    const isLoggedIn = await page.evaluate(() => {
+      // If we see the marketplace search/feed, we're logged in
+      const hasMarketplaceContent =
+        document.querySelector('[role="feed"]') ||
+        document.querySelector('[data-render-location="marketplace_search"]') ||
+        document.querySelector('[aria-label="Marketplace"]') ||
+        document.querySelector('a[href*="/marketplace"]') ||
+        document.body.innerText.includes("Marketplace")
+      return !!hasMarketplaceContent
+    })
 
     if (isLoggedIn) {
-      console.log("[Scanner] Already authenticated to Facebook")
+      console.log("[Scanner] Authenticated to Facebook")
       await page.close()
       return true
     }
 
-    const hadCookies = await loadCookies(context)
     if (hadCookies) {
-      await page.goto("https://www.facebook.com/marketplace", {
-        waitUntil: "networkidle",
-        timeout: 30000,
-      })
-      const stillLoggedIn = !page.url().includes("login")
-      if (stillLoggedIn) {
-        console.log("[Scanner] Authenticated with saved cookies")
-        await page.close()
-        return true
-      }
+      console.log("[Scanner] Cookies present but not logged in — may be expired")
+    } else {
+      console.log("[Scanner] No Facebook session cookies")
     }
 
-    console.log("[Scanner] Needs Facebook login")
     await page.close()
     return false
   } catch (error) {

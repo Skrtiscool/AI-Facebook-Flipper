@@ -154,10 +154,12 @@ export async function runScan(): Promise<{
         }
       }
 
-      await prisma.alert.update({
-        where: { id: alert.id },
-        data: { lastRunAt: new Date() },
-      })
+      if (alert.id !== "default") {
+        await prisma.alert.update({
+          where: { id: alert.id },
+          data: { lastRunAt: new Date() },
+        }).catch(() => {})
+      }
     }
 
     await context.close()
