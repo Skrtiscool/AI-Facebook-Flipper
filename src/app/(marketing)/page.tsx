@@ -12,11 +12,12 @@ import {
   ArrowRight,
   Sparkles,
   Search,
-  Camera,
-  Calculator,
-  TrendingUp,
+  Clock,
   Bell,
-  Bot,
+  TrendingUp,
+  Sliders,
+  LayoutDashboard,
+  Zap,
   Check,
   ChevronRight,
   Menu,
@@ -44,6 +45,10 @@ const stagger = {
 export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
+  const scrollToHowItWorks = () => {
+    document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" })
+  }
+
   return (
     <div className="relative min-h-screen overflow-hidden">
       {/* Background gradient */}
@@ -65,9 +70,6 @@ export default function LandingPage() {
 
             {/* Desktop nav */}
             <div className="hidden items-center gap-8 md:flex">
-              <a href="#features" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-                Features
-              </a>
               <a href="#how-it-works" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
                 How It Works
               </a>
@@ -101,7 +103,6 @@ export default function LandingPage() {
           {/* Mobile menu */}
           {mobileMenuOpen && (
             <div className="mt-4 flex flex-col gap-3 border-t border-border pt-4 md:hidden">
-              <a href="#features" className="text-sm text-muted-foreground">Features</a>
               <a href="#how-it-works" className="text-sm text-muted-foreground">How It Works</a>
               <a href="#pricing" className="text-sm text-muted-foreground">Pricing</a>
               <div className="flex gap-2 pt-2">
@@ -131,7 +132,7 @@ export default function LandingPage() {
             transition={{ duration: 0.6 }}
           >
             <Badge variant="secondary" className="mb-6 gap-1 rounded-full px-4 py-1.5 text-xs">
-              <Sparkles className="h-3 w-3" /> AI-Powered Marketplace Analysis
+              <Sparkles className="h-3 w-3" /> Automated Marketplace Scanner
             </Badge>
           </motion.div>
 
@@ -141,8 +142,8 @@ export default function LandingPage() {
             transition={{ duration: 0.6, delay: 0.1 }}
             className="mx-auto max-w-4xl text-4xl font-bold leading-tight tracking-tight sm:text-5xl md:text-6xl lg:text-7xl"
           >
-            Find Profitable Flips{" "}
-            <span className="gradient-text">Before Anyone Else.</span>
+            We Scan Facebook Marketplace 24/7{" "}
+            <span className="gradient-text">So You Don't Have To.</span>
           </motion.h1>
 
           <motion.p
@@ -151,7 +152,7 @@ export default function LandingPage() {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground md:text-xl"
           >
-            FlipScout uses AI to discover undervalued marketplace deals, predict resale value, and calculate profit instantly.
+            FlipScout runs in the background, scanning thousands of listings every 30 minutes. When it finds a profitable flip, you get an instant Discord alert.
           </motion.p>
 
           <motion.div
@@ -160,11 +161,13 @@ export default function LandingPage() {
             transition={{ duration: 0.6, delay: 0.3 }}
             className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row"
           >
-            <Button size="lg" className="h-12 gap-2 px-8 text-base">
-              Join Waitlist <ArrowRight className="h-4 w-4" />
-            </Button>
-            <Button size="lg" variant="outline" className="h-12 gap-2 px-8 text-base">
-              Try Demo <ChevronRight className="h-4 w-4" />
+            <SignUpButton mode="modal">
+              <Button size="lg" className="h-12 gap-2 px-8 text-base">
+                Start Scanning <ArrowRight className="h-4 w-4" />
+              </Button>
+            </SignUpButton>
+            <Button size="lg" variant="outline" className="h-12 gap-2 px-8 text-base" onClick={scrollToHowItWorks}>
+              See How It Works <ChevronRight className="h-4 w-4" />
             </Button>
           </motion.div>
 
@@ -215,10 +218,10 @@ export default function LandingPage() {
               Features
             </Badge>
             <h2 className="text-3xl font-bold md:text-4xl">
-              Everything You Need to Flip Smarter
+              Fully Automated Deal Hunting
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
-              Powerful AI tools to analyze, evaluate, and automate your flipping business.
+              Set it up once. FlipScout does the rest — scanning, analyzing, and alerting you to profitable flips.
             </p>
           </motion.div>
 
@@ -254,10 +257,10 @@ export default function LandingPage() {
               How It Works
             </Badge>
             <h2 className="text-3xl font-bold md:text-4xl">
-              From Listing to Profit in Seconds
+              From Setup to Alert in Minutes
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
-              Four simple steps to start finding profitable flips.
+              Four simple steps to start receiving profitable deal alerts.
             </p>
           </motion.div>
 
@@ -371,11 +374,13 @@ export default function LandingPage() {
               Join thousands of resellers using FlipScout to make smarter buying decisions.
             </p>
             <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
-              <Button size="lg" className="h-12 gap-2 px-8 text-base">
-                Join Waitlist <ArrowRight className="h-4 w-4" />
-              </Button>
-              <Button size="lg" variant="outline" className="h-12 gap-2 px-8 text-base">
-                View Demo
+              <SignUpButton mode="modal">
+                <Button size="lg" className="h-12 gap-2 px-8 text-base">
+                  Start Scanning <ArrowRight className="h-4 w-4" />
+                </Button>
+              </SignUpButton>
+              <Button size="lg" variant="outline" className="h-12 gap-2 px-8 text-base" onClick={scrollToHowItWorks}>
+                See How It Works
               </Button>
             </div>
           </motion.div>
@@ -410,57 +415,57 @@ export default function LandingPage() {
 
 const features = [
   {
-    icon: <Search className="h-5 w-5" />,
-    title: "AI Deal Scanner",
-    description: "Scan thousands of marketplace listings instantly. Our AI identifies undervalued items with high profit potential.",
-  },
-  {
-    icon: <Camera className="h-5 w-5" />,
-    title: "Image Recognition",
-    description: "Upload a photo and let AI identify the item, assess condition, and estimate value based on visual analysis.",
-  },
-  {
-    icon: <Calculator className="h-5 w-5" />,
-    title: "Profit Calculator",
-    description: "Get instant profit calculations including fees, shipping, and taxes. Know your exact margins before buying.",
-  },
-  {
-    icon: <TrendingUp className="h-5 w-5" />,
-    title: "Market Analysis",
-    description: "Real-time market data showing demand trends, price histories, and seasonal patterns for any product category.",
+    icon: <Clock className="h-5 w-5" />,
+    title: "24/7 Auto-Scanner",
+    description: "Runs every 30 minutes scanning Facebook Marketplace for deals matching your criteria. No manual searching required.",
   },
   {
     icon: <Bell className="h-5 w-5" />,
-    title: "Deal Alerts",
-    description: "Set alerts for specific items, brands, or price thresholds. Never miss a profitable listing again.",
+    title: "Discord Alerts",
+    description: "Get instant notifications in your Discord server when a profitable flip is found. Set it up once and forget it.",
   },
   {
-    icon: <Bot className="h-5 w-5" />,
-    title: "AI Negotiation Assistant",
-    description: "Get AI-powered negotiation scripts and price suggestions to help you close deals at the best price.",
+    icon: <Sparkles className="h-5 w-5" />,
+    title: "AI Profit Analysis",
+    description: "Each listing is analyzed by GPT-4o for market value, profit potential, and deal scoring before you're alerted.",
+  },
+  {
+    icon: <Sliders className="h-5 w-5" />,
+    title: "Smart Filters",
+    description: "Set keywords, brands, max prices, and minimum profit thresholds. Only get alerts for deals worth your time.",
+  },
+  {
+    icon: <LayoutDashboard className="h-5 w-5" />,
+    title: "Deal Dashboard",
+    description: "All discovered deals are saved to your dashboard. Review, save, and track your best opportunities.",
+  },
+  {
+    icon: <Zap className="h-5 w-5" />,
+    title: "Zero Effort",
+    description: "Install once, configure your alerts, and let FlipScout do the work. No daily logins or manual searching.",
   },
 ]
 
 const steps = [
   {
     number: "01",
-    title: "Add a Listing",
-    description: "Paste a marketplace URL, enter item details manually, or upload a photo. FlipScout accepts input from any source.",
+    title: "Set Your Alerts",
+    description: "Tell FlipScout what you're looking for. Keywords, brands, price range, and minimum profit.",
   },
   {
     number: "02",
-    title: "AI Analyzes the Item",
-    description: "Our AI scans the listing, analyzes images, checks market data, and evaluates condition to determine true market value.",
+    title: "We Scan Every 30 Min",
+    description: "Our automated scanner checks Facebook Marketplace for matching listings around the clock.",
   },
   {
     number: "03",
-    title: "Profit Calculated",
-    description: "FlipScout calculates potential profit after all fees, shipping costs, and taxes. See your exact expected return.",
+    title: "AI Analyzes Each Find",
+    description: "GPT-4o evaluates every listing for market value, profit potential, and deal quality.",
   },
   {
     number: "04",
-    title: "Receive Your Recommendation",
-    description: "Get a clear BUY/PASS recommendation with a deal score, confidence rating, and detailed reasoning for each listing.",
+    title: "Get Discord Alerts",
+    description: "When a profitable deal is found, you get an instant alert in Discord with all the details.",
   },
 ]
 

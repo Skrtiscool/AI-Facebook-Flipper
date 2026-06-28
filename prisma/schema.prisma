@@ -7,22 +7,26 @@ datasource db {
 }
 
 model User {
-  id            String     @id @default(cuid())
-  email         String     @unique
-  name          String?
-  imageUrl      String?
-  clerkId       String     @unique
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-  deals         Deal[]
-  savedSearches SavedSearch[]
-  subscription  Subscription?
+  id                   String                 @id @default(cuid())
+  email                String                 @unique
+  name                 String?
+  imageUrl             String?
+  clerkId              String                 @unique
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  deals                Deal[]
+  savedSearches        SavedSearch[]
+  subscription         Subscription?
+  alerts               Alert[]
+  notificationChannels NotificationChannel[]
 }
 
 model Deal {
   id             String   @id @default(cuid())
   userId         String
   user           User     @relation(fields: [userId], references: [id])
+  alertId        String?
+  alert          Alert?   @relation(fields: [alertId], references: [id])
   title          String
   description    String?
   price          Float
@@ -38,8 +42,52 @@ model Deal {
   brand          String?
   condition      String?
   location       String?
+  scannedAt      DateTime @default(now())
+  read           Boolean  @default(false)
+  saved          Boolean  @default(false)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+}
+
+model Alert {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  name       String
+  keywords   String[]
+  brands     String[]
+  maxPrice   Float?
+  minProfit  Float?
+  minScore   Int?
+  platforms  String[] @default(["facebook"])
+  active     Boolean  @default(true)
+  lastRunAt  DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  deals      Deal[]
+}
+
+model ScannerRun {
+  id              String      @id @default(cuid())
+  startedAt       DateTime    @default(now())
+  completedAt     DateTime?
+  listingsScanned Int         @default(0)
+  dealsFound      Int         @default(0)
+  status          String      @default("running")
+  error           String?
+  triggeredBy     String      @default("scheduler")
+  alertId         String?
+}
+
+model NotificationChannel {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  type      String   @default("discord")
+  config    String
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model SavedSearch {

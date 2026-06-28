@@ -1,217 +1,308 @@
 "use client"
 
+import { useState, useEffect } from "react"
+import { motion } from "framer-motion"
 import {
+  Play,
+  Square,
+  Clock,
+  Search,
   TrendingUp,
-  DollarSign,
   Trophy,
+  Bell,
+  ExternalLink,
   Bookmark,
-  ArrowUpRight,
-  ArrowDownRight,
+  Check,
+  Sparkles,
 } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts"
+import { Skeleton } from "@/components/ui/skeleton"
+import { cn } from "@/lib/utils"
 
-const stats = [
-  {
-    title: "Total Deals Found",
-    value: "47",
-    change: "+12%",
-    trend: "up",
-    icon: TrendingUp,
-  },
-  {
-    title: "Average Profit",
-    value: "$184",
-    change: "+8%",
-    trend: "up",
-    icon: DollarSign,
-  },
-  {
-    title: "Best Flip",
-    value: "$520",
-    change: "Milwaukee M18",
-    trend: "up",
-    icon: Trophy,
-  },
-  {
-    title: "Saved Opportunities",
-    value: "12",
-    change: "+3",
-    trend: "up",
-    icon: Bookmark,
-  },
-]
+interface ScannerStatus {
+  running: boolean
+  lastRun: { startedAt: string; listingsScanned: number; dealsFound: number } | null
+  totalDeals: number
+  activeAlerts: number
+}
 
-const chartData = [
-  { name: "Mon", profit: 400 },
-  { name: "Tue", profit: 300 },
-  { name: "Wed", profit: 600 },
-  { name: "Thu", profit: 800 },
-  { name: "Fri", profit: 500 },
-  { name: "Sat", profit: 900 },
-  { name: "Sun", profit: 700 },
-]
-
-const recentDeals = [
-  {
-    title: "Milwaukee M18 Fuel Drill Kit",
-    price: 120,
-    value: 350,
-    profit: 230,
-    score: 94,
-    recommendation: "buy",
-  },
-  {
-    title: "Sony WH-1000XM5 Headphones",
-    price: 180,
-    value: 280,
-    profit: 100,
-    score: 78,
-    recommendation: "buy",
-  },
-  {
-    title: "iPhone 15 Pro Max 256GB",
-    price: 900,
-    value: 950,
-    profit: 50,
-    score: 45,
-    recommendation: "pass",
-  },
-  {
-    title: "Nintendo Switch OLED Zelda Edition",
-    price: 250,
-    value: 400,
-    profit: 150,
-    score: 88,
-    recommendation: "buy",
-  },
-]
+interface Deal {
+  id: string
+  title: string
+  price: number
+  estimatedValue: number
+  profit: number
+  score: number
+  recommendation: string
+  platform: string | null
+  listingUrl: string | null
+  imageUrls: string[]
+  location: string | null
+  reason: string | null
+  scannedAt: string
+  read: boolean
+  saved: boolean
+}
 
 export default function DashboardPage() {
+  const [status, setStatus] = useState<ScannerStatus | null>(null)
+  const [deals, setDeals] = useState<Deal[]>([])
+  const [loading, setLoading] = useState(true)
+  const [starting, setStarting] = useState(false)
+
+  async function fetchData() {
+    const [statusRes, dealsRes] = await Promise.all([
+      fetch("/api/scanner/status"),
+      fetch("/api/deals"),
+    ])
+    if (statusRes.ok) setStatus(await statusRes.json())
+    if (dealsRes.ok) setDeals(await dealsRes.json())
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    fetchData()
+    const interval = setInterval(fetchData, 10000)
+    return () => clearInterval(interval)
+  }, [])
+
+  async function toggleScanner() {
+    setStarting(true)
+    const endpoint = status?.running ? "/api/scanner/stop" : "/api/scanner/start"
+    await fetch(endpoint, { method: "POST" })
+    await fetchData()
+    setStarting(false)
+  }
+
+  async function toggleSaved(deal: Deal) {
+    await fetch("/api/deals", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: deal.id, saved: !deal.saved }),
+    })
+    fetchData()
+  }
+
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground">Welcome back! Here&apos;s your flipping overview.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Scanner Dashboard</h1>
+          <p className="text-muted-foreground">
+            {status?.running
+              ? "Scanner is running — checking for deals every 30 min"
+              : "Scanner is stopped"}
+          </p>
+        </div>
+        <Button
+          onClick={toggleScanner}
+          disabled={starting}
+          className={cn(
+            "gap-2",
+            status?.running
+              ? "bg-red-500/20 text-red-400 hover:bg-red-500/30"
+              : ""
+          )}
+          variant={status?.running ? "outline" : "default"}
+        >
+          {starting ? (
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+          ) : status?.running ? (
+            <>
+              <Square className="h-4 w-4" /> Stop Scanner
+            </>
+          ) : (
+            <>
+              <Play className="h-4 w-4" /> Start Scanner
+            </>
+          )}
+        </Button>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => (
-          <Card key={stat.title} className="glass border-0">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {stat.title}
-              </CardTitle>
-              <stat.icon className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
-              <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                {stat.trend === "up" ? (
-                  <ArrowUpRight className="h-3 w-3 text-emerald-500" />
-                ) : (
-                  <ArrowDownRight className="h-3 w-3 text-red-500" />
-                )}
-                <span className={stat.trend === "up" ? "text-emerald-500" : "text-red-500"}>
-                  {stat.change}
-                </span>
-                {" vs last week"}
+      {/* Status card */}
+      <Card className={cn("glass border-0", status?.running ? "ring-1 ring-emerald-500/30" : "")}>
+        <CardContent className="flex items-center gap-4 p-6">
+          <div
+            className={cn(
+              "flex h-10 w-10 items-center justify-center rounded-full",
+              status?.running ? "bg-emerald-500/20" : "bg-muted"
+            )}
+          >
+            <div
+              className={cn(
+                "h-3 w-3 rounded-full",
+                status?.running ? "bg-emerald-400 animate-pulse" : "bg-muted-foreground"
+              )}
+            />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-medium">
+              {status?.running ? "Scanner Active" : "Scanner Offline"}
+            </p>
+            {status?.lastRun ? (
+              <p className="text-xs text-muted-foreground">
+                Last scan: {new Date(status.lastRun.startedAt).toLocaleString()} ·{" "}
+                {status.lastRun.listingsScanned} listings scanned ·{" "}
+                {status.lastRun.dealsFound} deals found
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">No scans yet</p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Stats */}
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Card className="glass border-0">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              <Bell className="h-4 w-4" /> Active Alerts
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">{status?.activeAlerts ?? 0}</p>
+          </CardContent>
+        </Card>
+        <Card className="glass border-0">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              <Search className="h-4 w-4" /> Deals Found
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">{deals.length}</p>
+          </CardContent>
+        </Card>
+        <Card className="glass border-0">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              <TrendingUp className="h-4 w-4" /> Best Profit
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold text-emerald-400">
+              ${deals.length > 0 ? Math.max(...deals.map((d) => d.profit)).toFixed(0) : 0}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Deals feed */}
+      <div>
+        <h2 className="mb-4 text-lg font-semibold">Discovered Deals</h2>
+        {loading ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-28 w-full rounded-xl" />
+            ))}
+          </div>
+        ) : deals.length === 0 ? (
+          <Card className="glass border-0">
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <Search className="mb-3 h-8 w-8 text-muted-foreground" />
+              <p className="text-lg font-medium">No deals yet</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Create alerts and start the scanner to find deals.
               </p>
             </CardContent>
           </Card>
-        ))}
-      </div>
-
-      {/* Chart + Recent Deals */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card className="glass border-0">
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Profit Trend</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[250px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData}>
-                  <defs>
-                    <linearGradient id="profitGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
-                  <Tooltip
-                    contentStyle={{
-                      background: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "8px",
-                      color: "hsl(var(--foreground))",
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="profit"
-                    stroke="hsl(var(--primary))"
-                    fill="url(#profitGradient)"
-                    strokeWidth={2}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="glass border-0">
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Recent Deals</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {recentDeals.map((deal) => (
-                <div
-                  key={deal.title}
-                  className="flex items-center justify-between rounded-lg border border-border p-3"
-                >
-                  <div className="flex-1">
-                    <p className="text-sm font-medium truncate max-w-[200px]">{deal.title}</p>
-                    <p className="text-xs text-muted-foreground">
-                      Listed: ${deal.price} &middot; Est: ${deal.value}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-bold text-emerald-400">+${deal.profit}</p>
-                    <Badge
-                      className={
-                        deal.recommendation === "buy"
-                          ? "bg-emerald-500/20 text-emerald-400 text-xs"
-                          : "bg-red-500/20 text-red-400 text-xs"
-                      }
-                    >
-                      {deal.recommendation === "buy" ? "BUY" : "PASS"}
-                    </Badge>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        ) : (
+          <div className="space-y-3">
+            {deals.map((deal) => (
+              <motion.div
+                key={deal.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                <Card className="glass border-0 transition-all hover:scale-[1.01]">
+                  <CardContent className="flex gap-4 p-4">
+                    {deal.imageUrls?.[0] && (
+                      <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg">
+                        <img
+                          src={deal.imageUrls[0]}
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium">{deal.title}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {deal.platform} · {deal.location || "Unknown location"}
+                          </p>
+                        </div>
+                        <Badge
+                          className={
+                            deal.recommendation === "buy"
+                              ? "shrink-0 bg-emerald-500/20 text-emerald-400"
+                              : "shrink-0 bg-red-500/20 text-red-400"
+                          }
+                        >
+                          {deal.recommendation === "buy" ? "BUY" : "PASS"}
+                        </Badge>
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                        <span>
+                          Listed:{" "}
+                          <span className="font-medium">${deal.price.toFixed(0)}</span>
+                        </span>
+                        <span>
+                          Value:{" "}
+                          <span className="font-medium">
+                            ${deal.estimatedValue.toFixed(0)}
+                          </span>
+                        </span>
+                        <span>
+                          Profit:{" "}
+                          <span className="font-medium text-emerald-400">
+                            +${deal.profit.toFixed(0)}
+                          </span>
+                        </span>
+                        <span>
+                          Score:{" "}
+                          <span className="font-medium">{deal.score}/100</span>
+                        </span>
+                      </div>
+                      {deal.reason && (
+                        <p className="mt-1 text-xs text-muted-foreground line-clamp-1">
+                          {deal.reason}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex shrink-0 flex-col gap-1">
+                      {deal.listingUrl && (
+                        <a
+                          href={deal.listingUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <ExternalLink className="h-4 w-4" />
+                          </Button>
+                        </a>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => toggleSaved(deal)}
+                      >
+                        <Bookmark
+                          className={cn("h-4 w-4", deal.saved && "fill-primary text-primary")}
+                        />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )
