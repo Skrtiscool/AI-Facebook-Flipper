@@ -1,13 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
-import {
-  SignInButton,
-  SignUpButton,
-  Show,
-  UserButton,
-} from "@clerk/nextjs"
+import { useRouter } from "next/navigation"
+import { useUser, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs"
 import {
   ArrowRight,
   Sparkles,
@@ -43,6 +39,15 @@ const stagger = {
 }
 
 export default function LandingPage() {
+  const { isSignedIn, isLoaded } = useUser()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (isLoaded && isSignedIn) {
+      router.push("/dashboard")
+    }
+  }, [isLoaded, isSignedIn, router])
+
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const scrollToHowItWorks = () => {
@@ -79,19 +84,20 @@ export default function LandingPage() {
             </div>
 
             <div className="hidden items-center gap-3 md:flex">
-              <Show when="signed-out">
-                <SignInButton mode="modal">
-                  <Button variant="ghost" size="sm">Sign In</Button>
-                </SignInButton>
-                <SignUpButton mode="modal">
-                  <Button size="sm" className="gap-1">
-                    Get Started <ArrowRight className="h-3 w-3" />
-                  </Button>
-                </SignUpButton>
-              </Show>
-              <Show when="signed-in">
+              {!isLoaded ? null : !isSignedIn ? (
+                <>
+                  <SignInButton mode="modal">
+                    <Button variant="ghost" size="sm">Sign In</Button>
+                  </SignInButton>
+                  <SignUpButton mode="modal">
+                    <Button size="sm" className="gap-1">
+                      Get Started <ArrowRight className="h-3 w-3" />
+                    </Button>
+                  </SignUpButton>
+                </>
+              ) : (
                 <UserButton />
-              </Show>
+              )}
             </div>
 
             {/* Mobile menu button */}
@@ -106,17 +112,18 @@ export default function LandingPage() {
               <a href="#how-it-works" className="text-sm text-muted-foreground">How It Works</a>
               <a href="#pricing" className="text-sm text-muted-foreground">Pricing</a>
               <div className="flex gap-2 pt-2">
-                <Show when="signed-out">
-                  <SignInButton mode="modal">
-                    <Button variant="ghost" size="sm" className="flex-1">Sign In</Button>
-                  </SignInButton>
-                  <SignUpButton mode="modal">
-                    <Button size="sm" className="flex-1">Get Started</Button>
-                  </SignUpButton>
-                </Show>
-                <Show when="signed-in">
+                {!isLoaded ? null : !isSignedIn ? (
+                  <>
+                    <SignInButton mode="modal">
+                      <Button variant="ghost" size="sm" className="flex-1">Sign In</Button>
+                    </SignInButton>
+                    <SignUpButton mode="modal">
+                      <Button size="sm" className="flex-1">Get Started</Button>
+                    </SignUpButton>
+                  </>
+                ) : (
                   <UserButton />
-                </Show>
+                )}
               </div>
             </div>
           )}

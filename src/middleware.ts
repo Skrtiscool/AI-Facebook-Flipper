@@ -6,12 +6,6 @@ export default clerkMiddleware()
 
 export const config = {
   matcher: [
-    "/(api|trpc)(.*)",
-    "/__clerk/:path*",
-    "/dashboard/:path*",
-    "/analyze/:path*",
-    "/saved-deals/:path*",
-    "/alerts/:path*",
-    "/account/:path*",
+    "/((?!_next|_next/static|favicon.ico).*)",
   ],
 }
