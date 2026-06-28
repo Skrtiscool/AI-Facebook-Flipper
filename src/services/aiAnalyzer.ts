@@ -21,6 +21,7 @@ export interface AnalysisResult {
 }
 
 let openai: OpenAI | null = null
+let openaiQuotaExhausted = false
 
 function getClient(): OpenAI {
   if (!openai) {
@@ -28,7 +29,7 @@ function getClient(): OpenAI {
     if (!apiKey) {
       throw new Error("OPENAI_API_KEY is not configured")
     }
-    openai = new OpenAI({ apiKey })
+    openai = new OpenAI({ apiKey, maxRetries: 0, timeout: 5000 })
   }
   return openai
 }
@@ -84,12 +85,21 @@ Location: ${input.location || "N/A"}`
 export async function analyzeWithFallback(
   input: AnalysisInput
 ): Promise<AnalysisResult> {
-  try {
-    if (process.env.OPENAI_API_KEY) {
+  if (!openaiQuotaExhausted && process.env.OPENAI_API_KEY) {
+    try {
       return await analyzeWithAI(input)
+    } catch (error: any) {
+      if (
+        error?.status === 429 ||
+        error?.message?.includes("insufficient_quota") ||
+        error?.code === "insufficient_quota"
+      ) {
+        openaiQuotaExhausted = true
+        console.warn("OpenAI quota exhausted — skipping AI analysis for remaining listings")
+      } else {
+        console.warn("AI analysis failed, using fallback:", error)
+      }
     }
-  } catch (error) {
-    console.warn("AI analysis failed, using fallback:", error)
   }
 
   return generateFallbackAnalysis(input)
