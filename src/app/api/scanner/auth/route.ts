@@ -34,8 +34,10 @@ export async function POST() {
       waitUntil: "domcontentloaded",
     })
 
-    // Wait for user to log in — detect by URL leaving login page
-    await page.waitForURL("**/marketplace/**", { timeout: 0 })
+    // Wait for user to log in — detect by URL containing /marketplace
+    // Timeout after 5 minutes in case something goes wrong
+    await page.waitForURL(/\/marketplace/, { timeout: 300000 })
+    await page.waitForTimeout(2000)
     await saveCookies(context)
 
     await browser.close()
