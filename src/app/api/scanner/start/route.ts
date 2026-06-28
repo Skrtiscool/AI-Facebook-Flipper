@@ -1,21 +1,28 @@
 import { NextResponse } from "next/server"
-import { auth } from "@clerk/nextjs/server"
+import { ensureUser } from "@/lib/ensureUser"
 import { startScheduler } from "@/services/scanner/scheduler"
 import { runScan } from "@/services/scanner"
 
 export async function POST() {
-  const { userId } = await auth()
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  try {
+    await ensureUser()
 
-  startScheduler(async () => {
-    await runScan()
-  })
+    startScheduler(async () => {
+      await runScan()
+    })
 
-  // Run an immediate first scan
-  const result = await runScan()
+    // Run first scan in background so we respond fast
+    runScan().catch((err) => {
+      console.error("[Scanner] Initial scan failed:", err)
+    })
 
-  return NextResponse.json({
-    message: "Scanner started",
-    scan: result,
-  })
+    return NextResponse.json({
+      message: "Scanner started — initial scan running in background",
+    })
+  } catch (e: any) {
+    return NextResponse.json(
+      { error: e?.message || "Unauthorized" },
+      { status: 401 }
+    )
+  }
 }

@@ -70,8 +70,16 @@ export default function DashboardPage() {
 
   async function toggleScanner() {
     setStarting(true)
-    const endpoint = status?.running ? "/api/scanner/stop" : "/api/scanner/start"
-    await fetch(endpoint, { method: "POST" })
+    try {
+      const endpoint = status?.running ? "/api/scanner/stop" : "/api/scanner/start"
+      const res = await fetch(endpoint, { method: "POST" })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Request failed" }))
+        alert(`Scanner error: ${err.error || err.message || "Unknown error"}`)
+      }
+    } catch (e: any) {
+      alert(`Scanner error: ${e.message}`)
+    }
     await fetchData()
     setStarting(false)
   }
