@@ -6,13 +6,12 @@ export default clerkMiddleware()
 
 export const config = {
   matcher: [
-    // Protect dashboard routes
+    "/(api|trpc)(.*)",
+    "/__clerk/:path*",
     "/dashboard/:path*",
     "/analyze/:path*",
     "/saved-deals/:path*",
     "/alerts/:path*",
     "/account/:path*",
-    // Always run for API routes
-    "/api/:path*",
   ],
 }
