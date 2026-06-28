@@ -86,14 +86,14 @@ export default function AlertsPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Scan Alerts</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-xl font-bold sm:text-2xl">Scan Alerts</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">
             Set what to scan for — FlipScout checks every 30 minutes.
           </p>
         </div>
-        <Button onClick={() => setShowForm(!showForm)} className="gap-2">
+        <Button onClick={() => setShowForm(!showForm)} className="gap-2 w-full sm:w-auto">
           <Plus className="h-4 w-4" /> New Alert
         </Button>
       </div>
@@ -129,7 +129,7 @@ export default function AlertsPage() {
                 onChange={(e) => setForm({ ...form, brands: e.target.value })}
               />
             </div>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
               <div className="space-y-2">
                 <Label>Max Price ($)</Label>
                 <Input
@@ -156,8 +156,8 @@ export default function AlertsPage() {
               </div>
             </div>
             <div className="flex gap-2">
-              <Button onClick={createAlert}>Create Alert</Button>
-              <Button variant="ghost" onClick={() => setShowForm(false)}>
+              <Button onClick={createAlert} className="flex-1 sm:flex-none">Create Alert</Button>
+              <Button variant="ghost" onClick={() => setShowForm(false)} className="flex-1 sm:flex-none">
                 Cancel
               </Button>
             </div>

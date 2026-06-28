@@ -97,10 +97,10 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Scanner Dashboard</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-xl font-bold sm:text-2xl">Scanner Dashboard</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">
             {status?.running
               ? "Scanner is running — checking for deals every 30 min"
               : "Scanner is stopped"}
@@ -110,7 +110,7 @@ export default function DashboardPage() {
           onClick={toggleScanner}
           disabled={starting}
           className={cn(
-            "gap-2",
+            "gap-2 w-full sm:w-auto",
             status?.running
               ? "bg-red-500/20 text-red-400 hover:bg-red-500/30"
               : ""
@@ -183,35 +183,35 @@ export default function DashboardPage() {
       </Card>
 
       {/* Stats */}
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-3 gap-3 sm:gap-4">
         <Card className="glass border-0">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-              <Bell className="h-4 w-4" /> Active Alerts
+          <CardHeader className="pb-2 px-3 pt-3 sm:px-6 sm:pt-6">
+            <CardTitle className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground sm:text-sm sm:gap-2">
+              <Bell className="h-3 w-3 sm:h-4 sm:w-4" /> <span className="hidden sm:inline">Active</span> Alerts
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{status?.activeAlerts ?? 0}</p>
+          <CardContent className="px-3 pb-3 sm:px-6 sm:pb-6">
+            <p className="text-lg font-bold sm:text-2xl">{status?.activeAlerts ?? 0}</p>
           </CardContent>
         </Card>
         <Card className="glass border-0">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-              <Search className="h-4 w-4" /> Deals Found
+          <CardHeader className="pb-2 px-3 pt-3 sm:px-6 sm:pt-6">
+            <CardTitle className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground sm:text-sm sm:gap-2">
+              <Search className="h-3 w-3 sm:h-4 sm:w-4" /> <span className="hidden sm:inline">Deals</span> Found
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{deals.length}</p>
+          <CardContent className="px-3 pb-3 sm:px-6 sm:pb-6">
+            <p className="text-lg font-bold sm:text-2xl">{deals.length}</p>
           </CardContent>
         </Card>
         <Card className="glass border-0">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-              <TrendingUp className="h-4 w-4" /> Best Profit
+          <CardHeader className="pb-2 px-3 pt-3 sm:px-6 sm:pt-6">
+            <CardTitle className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground sm:text-sm sm:gap-2">
+              <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4" /> <span className="hidden sm:inline">Best</span> Profit
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-emerald-400">
+          <CardContent className="px-3 pb-3 sm:px-6 sm:pb-6">
+            <p className="text-lg font-bold text-emerald-400 sm:text-2xl">
               ${deals.length > 0 ? Math.max(...deals.map((d) => d.profit)).toFixed(0) : 0}
             </p>
           </CardContent>
@@ -246,9 +246,9 @@ export default function DashboardPage() {
                 animate={{ opacity: 1, y: 0 }}
               >
                 <Card className="glass border-0 transition-all hover:scale-[1.01]">
-                  <CardContent className="flex gap-4 p-4">
+                  <CardContent className="flex gap-3 p-3 sm:gap-4 sm:p-4">
                     {deal.imageUrls?.[0] && (
-                      <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg">
+                      <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg sm:h-20 sm:w-20">
                         <img
                           src={deal.imageUrls[0]}
                           alt=""
@@ -259,22 +259,22 @@ export default function DashboardPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-medium">{deal.title}</p>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-sm font-medium leading-tight line-clamp-2">{deal.title}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
                             {deal.platform} · {deal.location || "Unknown location"}
                           </p>
                         </div>
                         <Badge
                           className={
                             deal.recommendation === "buy"
-                              ? "shrink-0 bg-emerald-500/20 text-emerald-400"
-                              : "shrink-0 bg-red-500/20 text-red-400"
+                              ? "shrink-0 bg-emerald-500/20 text-emerald-400 text-[10px] sm:text-xs"
+                              : "shrink-0 bg-red-500/20 text-red-400 text-[10px] sm:text-xs"
                           }
                         >
                           {deal.recommendation === "buy" ? "BUY" : "PASS"}
                         </Badge>
                       </div>
-                      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                      <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs sm:text-sm">
                         <span>
                           Listed:{" "}
                           <span className="font-medium">${deal.price.toFixed(0)}</span>
@@ -297,33 +297,29 @@ export default function DashboardPage() {
                         </span>
                       </div>
                       {deal.reason && (
-                        <p className="mt-1 text-xs text-muted-foreground line-clamp-1">
+                        <p className="mt-1 text-[10px] sm:text-xs text-muted-foreground line-clamp-2">
                           {deal.reason}
                         </p>
                       )}
-                    </div>
-                    <div className="flex shrink-0 flex-col gap-1">
-                      {deal.listingUrl && (
-                        <a
-                          href={deal.listingUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                      <div className="mt-2 flex gap-1">
+                        {deal.listingUrl && (
+                          <a href={deal.listingUrl} target="_blank" rel="noopener noreferrer">
+                            <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8">
+                              <ExternalLink className="h-3 w-3 sm:h-4 sm:w-4" />
+                            </Button>
+                          </a>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 sm:h-8 sm:w-8"
+                          onClick={() => toggleSaved(deal)}
                         >
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <ExternalLink className="h-4 w-4" />
-                          </Button>
-                        </a>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => toggleSaved(deal)}
-                      >
-                        <Bookmark
-                          className={cn("h-4 w-4", deal.saved && "fill-primary text-primary")}
-                        />
-                      </Button>
+                          <Bookmark
+                            className={cn("h-3 w-3 sm:h-4 sm:w-4", deal.saved && "fill-primary text-primary")}
+                          />
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>

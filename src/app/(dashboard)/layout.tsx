@@ -99,7 +99,7 @@ export default function DashboardLayout({
       </Sheet>
 
       {/* Main content */}
-      <main className="flex-1 overflow-y-auto bg-background p-6 md:p-8">
+      <main className="flex-1 overflow-y-auto bg-background pt-14 p-6 md:pt-8 md:p-8">
         {children}
       </main>
     </div>

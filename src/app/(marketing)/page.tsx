@@ -59,7 +59,7 @@ export default function LandingPage() {
 
       {/* Nav */}
       <nav className="fixed top-0 left-0 right-0 z-50">
-        <div className="glass-strong mx-auto mt-4 max-w-7xl rounded-2xl px-6 py-3 mx-4">
+        <div className="glass-strong mx-4 mt-4 max-w-7xl rounded-2xl px-6 py-3 md:mx-auto">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
@@ -188,18 +188,18 @@ export default function LandingPage() {
               </div>
               <Badge className="bg-emerald-500/20 text-emerald-400 text-xs">BUY</Badge>
             </div>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="glass rounded-xl p-3 text-center">
-                <p className="text-xs text-muted-foreground">Listed Price</p>
-                <p className="text-lg font-bold">$120</p>
+            <div className="grid grid-cols-3 gap-2 sm:gap-4">
+              <div className="glass rounded-xl p-2 sm:p-3 text-center">
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Listed Price</p>
+                <p className="text-base sm:text-lg font-bold">$120</p>
               </div>
-              <div className="glass rounded-xl p-3 text-center">
-                <p className="text-xs text-muted-foreground">Est. Value</p>
-                <p className="text-lg font-bold text-primary">$350</p>
+              <div className="glass rounded-xl p-2 sm:p-3 text-center">
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Est. Value</p>
+                <p className="text-base sm:text-lg font-bold text-primary">$350</p>
               </div>
-              <div className="glass rounded-xl p-3 text-center">
-                <p className="text-xs text-muted-foreground">Profit</p>
-                <p className="text-lg font-bold text-emerald-400">+$180</p>
+              <div className="glass rounded-xl p-2 sm:p-3 text-center">
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Profit</p>
+                <p className="text-base sm:text-lg font-bold text-emerald-400">+$180</p>
               </div>
             </div>
             <div className="mt-3 flex items-center justify-between">
@@ -307,7 +307,7 @@ export default function LandingPage() {
             </p>
           </motion.div>
 
-          <motion.div {...stagger} className="mt-16 grid gap-8 md:grid-cols-3">
+          <motion.div {...stagger} className="mt-16 grid gap-6 sm:gap-8 sm:grid-cols-2 md:grid-cols-3">
             {pricingTiers.map((tier, i) => (
               <motion.div
                 key={i}
