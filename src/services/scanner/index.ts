@@ -37,18 +37,39 @@ export async function runScan(): Promise<{
   let totalFound = 0
 
   try {
-    const activeAlerts = await prisma.alert.findMany({
+    let activeAlerts = await prisma.alert.findMany({
       where: { active: true },
       include: { user: true },
     })
 
     if (activeAlerts.length === 0) {
-      console.log("[Scanner] No active alerts to scan")
-      await prisma.scannerRun.update({
-        where: { id: scanRun.id },
-        data: { status: "completed", completedAt: new Date() },
-      })
-      return { scanned: 0, found: 0 }
+      console.log("[Scanner] No alerts configured — using default scan")
+      // Get any user to assign deals to
+      const anyUser = await prisma.user.findFirst()
+      if (!anyUser) {
+        console.log("[Scanner] No users in database — skipping scan")
+        await prisma.scannerRun.update({
+          where: { id: scanRun.id },
+          data: { status: "completed", completedAt: new Date() },
+        })
+        return { scanned: 0, found: 0 }
+      }
+      // Scan popular flipping categories by default
+      activeAlerts = DEFAULT_KEYWORDS.map((kw) => ({
+        id: "default",
+        name: kw,
+        keywords: [kw],
+        brands: [],
+        maxPrice: null,
+        minProfit: 20,
+        minScore: 50,
+        active: true,
+        userId: anyUser.id,
+        user: anyUser,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        lastRunAt: null,
+      })) as any
     }
 
     const brw = await getBrowser()
@@ -170,6 +191,19 @@ export async function runScan(): Promise<{
 
   return { scanned: totalScanned, found: totalFound }
 }
+
+const DEFAULT_KEYWORDS = [
+  "milwaukee",
+  "deWalt",
+  "makita",
+  "sony",
+  "nintendo",
+  "apple",
+  "lego",
+  "patagonia",
+  "supreme",
+  "yeezy",
+]
 
 export async function cleanupBrowser(): Promise<void> {
   if (browser) {

@@ -12,14 +12,37 @@ export async function saveCookies(context: BrowserContext): Promise<void> {
 
 export async function loadCookies(context: BrowserContext): Promise<boolean> {
   if (!fs.existsSync(COOKIE_PATH)) return false
-  const cookies = JSON.parse(fs.readFileSync(COOKIE_PATH, "utf-8"))
+  const raw = fs.readFileSync(COOKIE_PATH, "utf-8")
+  let cookies
+  try {
+    cookies = JSON.parse(raw)
+  } catch {
+    return false
+  }
+  if (!Array.isArray(cookies) || cookies.length === 0) return false
   await context.addCookies(cookies)
   console.log("[Scanner] Facebook cookies loaded")
   return true
 }
 
 export function hasSavedSession(): boolean {
-  return fs.existsSync(COOKIE_PATH)
+  if (!fs.existsSync(COOKIE_PATH)) return false
+  try {
+    const raw = fs.readFileSync(COOKIE_PATH, "utf-8")
+    const cookies = JSON.parse(raw)
+    if (!Array.isArray(cookies)) return false
+    // Check for a valid Facebook session cookie (c_user or xs)
+    const hasSessionCookie = cookies.some(
+      (c: any) =>
+        c.name === "c_user" &&
+        c.value &&
+        c.value.length > 0 &&
+        (!c.expires || c.expires > Date.now() / 1000)
+    )
+    return hasSessionCookie
+  } catch {
+    return false
+  }
 }
 
 export async function clearSession(): Promise<void> {
@@ -62,7 +85,7 @@ export async function ensureAuthenticated(
       }
     }
 
-    console.log("[Scanner] Needs Facebook login. Opening browser for manual auth...")
+    console.log("[Scanner] Needs Facebook login")
     await page.close()
     return false
   } catch (error) {
