@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { chromium } from "playwright"
-import { saveCookies, hasSavedSession } from "@/services/scanner/auth"
+import { saveCookies, hasSavedSession, clearSession } from "@/services/scanner/auth"
 import { ensureUser } from "@/lib/ensureUser"
 
 export async function GET() {
@@ -16,9 +16,8 @@ export async function POST() {
   try {
     await ensureUser()
 
-    if (hasSavedSession()) {
-      return NextResponse.json({ message: "Already connected to Facebook" })
-    }
+    const { clearSession } = await import("@/services/scanner/auth")
+    clearSession()
 
     const browser = await chromium.launch({
       headless: false,
@@ -54,7 +53,6 @@ export async function POST() {
 export async function DELETE() {
   try {
     await ensureUser()
-    const { clearSession } = await import("@/services/scanner/auth")
     clearSession()
     return NextResponse.json({ message: "Facebook session cleared" })
   } catch {
