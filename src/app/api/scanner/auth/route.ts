@@ -45,17 +45,66 @@ export async function POST() {
     })
 
     if (needsLogin) {
-      console.log("[Auth] Login form detected — waiting for user to log in...")
-      // Wait for login form to disappear (user submitted credentials)
-      await page.waitForFunction(
-        () => {
-          const email = document.querySelector('input[name="email"], #email')
-          const pass = document.querySelector('input[name="pass"], #pass')
-          return !email && !pass
-        },
-        { timeout: 300000 }
-      )
-      console.log("[Auth] Login detected!")
+      console.log("[Auth] Login form detected — auto-filling credentials...")
+
+      const fbEmail = process.env.FB_EMAIL
+      const fbPassword = process.env.FB_PASSWORD
+
+      if (fbEmail && fbPassword) {
+        // Auto-fill and submit
+        await page.fill('input[name="email"], #email', fbEmail)
+        await page.fill('input[name="pass"], #pass', fbPassword)
+        await page.waitForTimeout(500)
+        // Try clicking the login button with common selectors
+        const loginBtn = await page.waitForSelector(
+          'button[type="submit"], button:has-text("Log In"), button:has-text("Log in"), #loginbutton',
+          { timeout: 5000 }
+        ).catch(() => null)
+        if (loginBtn) {
+          await loginBtn.click()
+        } else {
+          await page.keyboard.press("Enter")
+        }
+
+        // Wait for login form to disappear (login completed)
+        await page.waitForFunction(
+          () => {
+            const email = document.querySelector('input[name="email"], #email')
+            const pass = document.querySelector('input[name="pass"], #pass')
+            return !email && !pass
+          },
+          { timeout: 60000 }
+        )
+        console.log("[Auth] Auto-login successful!")
+
+        // Handle post-login dialogs (Continue as, Save device, etc.)
+        await page.waitForTimeout(3000)
+        const buttons = await page.$$('button, div[role="button"], a[role="button"]')
+        for (const btn of buttons) {
+          const text = await btn.textContent()
+          if (
+            text?.toLowerCase().includes("continue") ||
+            text?.toLowerCase().includes("not now") ||
+            text?.toLowerCase().includes("save") ||
+            text?.toLowerCase().includes("close")
+          ) {
+            await btn.click().catch(() => {})
+            await page.waitForTimeout(1000)
+            break
+          }
+        }
+      } else {
+        console.log("[Auth] No credentials set — waiting for manual login...")
+        await page.waitForFunction(
+          () => {
+            const email = document.querySelector('input[name="email"], #email')
+            const pass = document.querySelector('input[name="pass"], #pass')
+            return !email && !pass
+          },
+          { timeout: 300000 }
+        )
+        console.log("[Auth] Manual login detected!")
+      }
     }
 
     // Wait a moment for post-login redirects, then go to marketplace
