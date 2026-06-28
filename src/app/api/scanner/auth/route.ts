@@ -16,7 +16,6 @@ export async function POST() {
   try {
     await ensureUser()
 
-    const { clearSession } = await import("@/services/scanner/auth")
     clearSession()
 
     const browser = await chromium.launch({
@@ -29,13 +28,32 @@ export async function POST() {
     })
 
     const page = await context.newPage()
-    await page.goto("https://www.facebook.com/marketplace", {
-      waitUntil: "domcontentloaded",
+
+    // Go to facebook.com first — login page might show
+    await page.goto("https://www.facebook.com", {
+      waitUntil: "networkidle",
+      timeout: 30000,
     })
 
-    // Wait for user to log in — detect by URL containing /marketplace
-    // Timeout after 5 minutes in case something goes wrong
-    await page.waitForURL(/\/marketplace/, { timeout: 300000 })
+    // Check if we're on a login page
+    const onLoginPage = page.url().includes("login")
+
+    if (onLoginPage) {
+      // Wait for user to log in — URL will stop containing "login"
+      console.log("[Auth] Waiting for Facebook login...")
+      await page.waitForFunction(
+        () => !window.location.href.includes("login"),
+        { timeout: 300000 }
+      )
+      console.log("[Auth] Login detected!")
+    }
+
+    // Now navigate to marketplace
+    await page.goto("https://www.facebook.com/marketplace", {
+      waitUntil: "networkidle",
+      timeout: 30000,
+    })
+
     await page.waitForTimeout(2000)
     await saveCookies(context)
 

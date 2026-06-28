@@ -1,0 +1,32 @@
+[
+  {
+    "name": "datr",
+    "value": "_65AamVpSG6il7pC68rbJ9h8",
+    "domain": ".facebook.com",
+    "path": "/",
+    "expires": 1817184001.135954,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "None"
+  },
+  {
+    "name": "sb",
+    "value": "_65AasxmnE0gPoMF34qU3ZgN",
+    "domain": ".facebook.com",
+    "path": "/",
+    "expires": 1817184001.136792,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "None"
+  },
+  {
+    "name": "wd",
+    "value": "1280x800",
+    "domain": ".facebook.com",
+    "path": "/",
+    "expires": 1783228808,
+    "httpOnly": false,
+    "secure": true,
+    "sameSite": "Lax"
+  }
+]
