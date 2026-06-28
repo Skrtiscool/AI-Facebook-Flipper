@@ -28,92 +28,76 @@ export async function POST() {
 
     const page = await context.newPage()
 
-    // Go to Facebook — user will see login or feed
-    await page.goto("https://www.facebook.com", {
-      waitUntil: "networkidle",
+    // Go directly to marketplace — if not logged in, Facebook redirects to login
+    await page.goto("https://www.facebook.com/marketplace", {
+      waitUntil: "domcontentloaded",
       timeout: 30000,
     })
 
-    // Check if we see a login form (email/password fields)
-    const needsLogin = await page.evaluate(() => {
-      return !!(
-        document.querySelector('input[name="email"]') ||
-        document.querySelector('input[name="pass"]') ||
-        document.querySelector("#email") ||
-        document.querySelector("#pass")
-      )
+    // Check if we're on the login page or see a login form
+    const currentUrl = page.url()
+    const hasLoginForm = await page.evaluate(() => {
+      return !!document.querySelector('input[name="email"], #email, input[name="pass"], #pass')
     })
 
-    if (needsLogin) {
-      console.log("[Auth] Login form detected — auto-filling credentials...")
-
+    if (currentUrl.includes("login") || hasLoginForm) {
       const fbEmail = process.env.FB_EMAIL
       const fbPassword = process.env.FB_PASSWORD
 
-      if (fbEmail && fbPassword) {
-        // Auto-fill and submit
-        await page.fill('input[name="email"], #email', fbEmail)
-        await page.fill('input[name="pass"], #pass', fbPassword)
-        await page.waitForTimeout(500)
-        // Try clicking the login button with common selectors
-        const loginBtn = await page.waitForSelector(
-          'button[type="submit"], button:has-text("Log In"), button:has-text("Log in"), #loginbutton',
-          { timeout: 5000 }
-        ).catch(() => null)
-        if (loginBtn) {
-          await loginBtn.click()
-        } else {
-          await page.keyboard.press("Enter")
-        }
+      if (fbEmail && fbPassword && hasLoginForm) {
+        // Auto-fill credentials
+        console.log("[Auth] Auto-filling credentials...")
+        await page.fill('input[name="email"], #email', fbEmail, { timeout: 5000 }).catch(() => {})
+        await page.fill('input[name="pass"], #pass', fbPassword, { timeout: 5000 }).catch(() => {})
+        await page.waitForTimeout(1000)
 
-        // Wait for login form to disappear (login completed)
+        // Click any button that says "Log In" or submit-type button
+        await page.evaluate(() => {
+          const buttons = document.querySelectorAll('button')
+          for (const btn of buttons) {
+            if (btn.textContent?.toLowerCase().includes('log in') || btn.type === 'submit') {
+              btn.click()
+              return
+            }
+          }
+        })
+        console.log("[Auth] Login button clicked")
+
+        // Wait for URL to change away from login
         await page.waitForFunction(
-          () => {
-            const email = document.querySelector('input[name="email"], #email')
-            const pass = document.querySelector('input[name="pass"], #pass')
-            return !email && !pass
-          },
+          () => !window.location.href.includes("login") &&
+                 !document.querySelector('input[name="email"], #email, input[name="pass"], #pass'),
           { timeout: 60000 }
         )
-        console.log("[Auth] Auto-login successful!")
-
-        // Handle post-login dialogs (Continue as, Save device, etc.)
-        await page.waitForTimeout(3000)
-        const buttons = await page.$$('button, div[role="button"], a[role="button"]')
-        for (const btn of buttons) {
-          const text = await btn.textContent()
-          if (
-            text?.toLowerCase().includes("continue") ||
-            text?.toLowerCase().includes("not now") ||
-            text?.toLowerCase().includes("save") ||
-            text?.toLowerCase().includes("close")
-          ) {
-            await btn.click().catch(() => {})
-            await page.waitForTimeout(1000)
-            break
-          }
-        }
+        console.log("[Auth] Login detected!")
       } else {
-        console.log("[Auth] No credentials set — waiting for manual login...")
+        // Manual login — wait for URL to change away from login
+        console.log("[Auth] Waiting for manual login...")
         await page.waitForFunction(
-          () => {
-            const email = document.querySelector('input[name="email"], #email')
-            const pass = document.querySelector('input[name="pass"], #pass')
-            return !email && !pass
-          },
+          () => !window.location.href.includes("login"),
           { timeout: 300000 }
         )
-        console.log("[Auth] Manual login detected!")
       }
     }
 
-    // Wait a moment for post-login redirects, then go to marketplace
-    await page.waitForTimeout(3000)
+    // Now on logged-in homepage — navigate to marketplace to trigger full session
     await page.goto("https://www.facebook.com/marketplace", {
-      waitUntil: "networkidle",
+      waitUntil: "domcontentloaded",
       timeout: 30000,
     })
-    await page.waitForTimeout(2000)
+    await page.waitForTimeout(3000)
+
+    // Verify we actually have session cookies before saving
+    const cookies = await context.cookies()
+    const hasSession = cookies.some((c: any) => c.name === "c_user" && c.value)
+    if (!hasSession) {
+      console.log("[Auth] No c_user cookie found — login may have failed")
+      await browser.close()
+      return NextResponse.json(
+        { error: "Facebook login failed — no session cookie created" },
+        { status: 500 }
+      )
+    }
 
     await saveCookies(context)
     await browser.close()
