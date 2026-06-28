@@ -1,4 +1,4 @@
-import OpenAI from "openai"
+import { GoogleGenerativeAI } from "@google/generative-ai"
 
 export interface AnalysisInput {
   title: string
@@ -20,82 +20,70 @@ export interface AnalysisResult {
   marketAnalysis: string[]
 }
 
-let openai: OpenAI | null = null
-let openaiQuotaExhausted = false
+let genAI: GoogleGenerativeAI | null = null
+let geminiQuotaExhausted = false
 
-function getClient(): OpenAI {
-  if (!openai) {
-    const apiKey = process.env.OPENAI_API_KEY
+function getClient(): GoogleGenerativeAI {
+  if (!genAI) {
+    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY
     if (!apiKey) {
-      throw new Error("OPENAI_API_KEY is not configured")
+      throw new Error("GEMINI_API_KEY is not configured")
     }
-    openai = new OpenAI({ apiKey, maxRetries: 0, timeout: 5000 })
+    genAI = new GoogleGenerativeAI(apiKey)
   }
-  return openai
+  return genAI
 }
 
 export async function analyzeWithAI(
   input: AnalysisInput
 ): Promise<AnalysisResult> {
   const client = getClient()
+  const model = client.getGenerativeModel({
+    model: "gemini-2.0-flash",
+    generationConfig: {
+      temperature: 0.3,
+      maxOutputTokens: 500,
+    },
+  })
 
-  const prompt = `You are FlipScout, an expert marketplace flipping assistant. Analyze this listing and provide a JSON response with estimatedValue, profit, score (0-100), recommendation ("buy"/"pass"/"maybe"), reason, confidence (0-1), and marketAnalysis (array of strings).
+  const prompt = `You are FlipScout, an expert marketplace flipping assistant. Analyze this listing and return ONLY valid JSON (no markdown, no code fences).
 
 Item: ${input.title}
 Description: ${input.description || "N/A"}
 Listed Price: $${input.price}
 Condition: ${input.condition}
 Brand: ${input.brand || "N/A"}
-Location: ${input.location || "N/A"}`
+Location: ${input.location || "N/A"}
 
-  const response = await client.chat.completions.create({
-    model: "gpt-4o",
-    messages: [
-      {
-        role: "system",
-        content:
-          "You are a precise marketplace analysis AI. Respond only with valid JSON matching the requested schema.",
-      },
-      {
-        role: "user",
-        content: input.images?.length
-          ? [
-              { type: "text", text: prompt },
-              ...input.images.map((url) => ({
-                type: "image_url" as const,
-                image_url: { url },
-              })),
-            ]
-          : [{ type: "text", text: prompt }],
-      },
-    ],
-    response_format: { type: "json_object" },
-    temperature: 0.3,
-    max_tokens: 500,
-  })
+JSON format:
+{
+  "estimatedValue": (number, what it could resell for),
+  "profit": (number, estimatedValue - price),
+  "score": (number 0-100),
+  "recommendation": "buy" | "pass" | "maybe",
+  "reason": "string explanation",
+  "confidence": (number 0-1),
+  "marketAnalysis": ["string1", "string2", "string3"]
+}`
 
-  const content = response.choices[0]?.message?.content
-  if (!content) {
-    throw new Error("No response from AI")
-  }
+  const result = await model.generateContent(prompt)
+  const text = result.response.text().trim()
 
-  return JSON.parse(content) as AnalysisResult
+  // Strip markdown code fences if present
+  const jsonStr = text.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "")
+  return JSON.parse(jsonStr) as AnalysisResult
 }
 
 export async function analyzeWithFallback(
   input: AnalysisInput
 ): Promise<AnalysisResult> {
-  if (!openaiQuotaExhausted && process.env.OPENAI_API_KEY) {
+  if (!geminiQuotaExhausted && (process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY)) {
     try {
       return await analyzeWithAI(input)
     } catch (error: any) {
-      if (
-        error?.status === 429 ||
-        error?.message?.includes("insufficient_quota") ||
-        error?.code === "insufficient_quota"
-      ) {
-        openaiQuotaExhausted = true
-        console.warn("OpenAI quota exhausted — skipping AI analysis for remaining listings")
+      if (error?.status === 429 || error?.status === 403 || error?.message?.includes("quota") || error?.message?.includes("not enabled")) {
+        geminiQuotaExhausted = true
+        console.warn("Gemini quota exhausted — skipping AI analysis for remaining listings")
       } else {
         console.warn("AI analysis failed, using fallback:", error)
       }
