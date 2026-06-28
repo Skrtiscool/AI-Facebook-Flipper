@@ -15,7 +15,6 @@ export async function GET() {
 export async function POST() {
   try {
     await ensureUser()
-
     clearSession()
 
     const browser = await chromium.launch({
@@ -29,34 +28,45 @@ export async function POST() {
 
     const page = await context.newPage()
 
-    // Go to facebook.com first — login page might show
+    // Go to Facebook — user will see login or feed
     await page.goto("https://www.facebook.com", {
       waitUntil: "networkidle",
       timeout: 30000,
     })
 
-    // Check if we're on a login page
-    const onLoginPage = page.url().includes("login")
+    // Check if we see a login form (email/password fields)
+    const needsLogin = await page.evaluate(() => {
+      return !!(
+        document.querySelector('input[name="email"]') ||
+        document.querySelector('input[name="pass"]') ||
+        document.querySelector("#email") ||
+        document.querySelector("#pass")
+      )
+    })
 
-    if (onLoginPage) {
-      // Wait for user to log in — URL will stop containing "login"
-      console.log("[Auth] Waiting for Facebook login...")
+    if (needsLogin) {
+      console.log("[Auth] Login form detected — waiting for user to log in...")
+      // Wait for login form to disappear (user submitted credentials)
       await page.waitForFunction(
-        () => !window.location.href.includes("login"),
+        () => {
+          const email = document.querySelector('input[name="email"], #email')
+          const pass = document.querySelector('input[name="pass"], #pass')
+          return !email && !pass
+        },
         { timeout: 300000 }
       )
       console.log("[Auth] Login detected!")
     }
 
-    // Now navigate to marketplace
+    // Wait a moment for post-login redirects, then go to marketplace
+    await page.waitForTimeout(3000)
     await page.goto("https://www.facebook.com/marketplace", {
       waitUntil: "networkidle",
       timeout: 30000,
     })
-
     await page.waitForTimeout(2000)
-    await saveCookies(context)
 
+    await saveCookies(context)
     await browser.close()
 
     return NextResponse.json({ message: "Facebook connected successfully" })
