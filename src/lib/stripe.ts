@@ -30,7 +30,7 @@ export const PLANS = {
   },
   pro: {
     name: "Pro",
-    price: 9.99,
+    price: 19.99,
     priceId: process.env.STRIPE_PRO_PRICE_ID || "",
     scansPerMonth: 9999,
     features: [
@@ -44,7 +44,7 @@ export const PLANS = {
   },
   biz: {
     name: "Business",
-    price: 24.99,
+    price: 34.99,
     priceId: process.env.STRIPE_BIZ_PRICE_ID || "",
     scansPerMonth: 99999,
     features: [

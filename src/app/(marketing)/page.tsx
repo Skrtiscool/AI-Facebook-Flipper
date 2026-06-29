@@ -522,7 +522,7 @@ const pricingTiers = [
   {
     id: "pro" as const,
     name: "Pro",
-    price: 9.99,
+    price: 19.99,
     period: "month",
     description: "For serious resellers",
     highlighted: true,
@@ -539,7 +539,7 @@ const pricingTiers = [
   {
     id: "biz" as const,
     name: "Business",
-    price: 24.99,
+    price: 34.99,
     period: "month",
     description: "For power flippers & teams",
     features: [
