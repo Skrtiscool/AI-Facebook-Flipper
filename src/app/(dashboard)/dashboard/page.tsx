@@ -110,9 +110,15 @@ export default function DashboardPage() {
     try {
       const endpoint = status?.running ? "/api/scanner/stop" : "/api/scanner/start"
       const res = await fetch(endpoint, { method: "POST" })
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "Request failed" }))
-        alert(`Scanner error: ${err.error || err.message || "Unknown error"}`)
+      const data = await res.json().catch(() => ({}))
+      if (data.setup) {
+        alert(
+          "Scanner runs via GitHub Actions every 30 minutes.\n\n" +
+          "Setup:\n" +
+          data.setup.join("\n")
+        )
+      } else if (!res.ok) {
+        alert(`Scanner error: ${data.error || "Request failed"}`)
       }
     } catch (e: any) {
       alert(`Scanner error: ${e.message}`)

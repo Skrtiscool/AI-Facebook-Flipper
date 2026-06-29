@@ -7,7 +7,9 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
-    "vercel-build": "prisma generate && next build"
+    "vercel-build": "prisma generate && next build",
+    "scan": "npx tsx src/cli/scan.ts",
+    "loginfb": "npx tsx src/cli/loginfb.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

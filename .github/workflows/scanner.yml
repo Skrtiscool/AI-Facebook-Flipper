@@ -1,0 +1,66 @@
+name: Facebook Scanner
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "src/cli/**"
+      - "src/services/scanner/**"
+      - ".github/workflows/scanner.yml"
+
+concurrency:
+  group: scanner
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: "20"
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install chromium
+
+      - name: Restore Facebook cookies
+        id: cookie-cache
+        uses: actions/cache@v4
+        with:
+          path: .fb-cookies.json
+          key: fb-cookies-${{ hashFiles('.fb-cookies.json') }}
+          restore-keys: |
+            fb-cookies-
+
+      - name: Facebook Login (if no valid cookies)
+        env:
+          FB_EMAIL: ${{ secrets.FB_EMAIL }}
+          FB_PASSWORD: ${{ secrets.FB_PASSWORD }}
+        run: npx tsx src/cli/loginfb.ts
+        continue-on-error: true
+
+      - name: Run scan
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx tsx src/cli/scan.ts
+        timeout-minutes: 12
+
+      - name: Cache Facebook cookies
+        uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: .fb-cookies.json
+          key: fb-cookies-${{ github.run_id }}

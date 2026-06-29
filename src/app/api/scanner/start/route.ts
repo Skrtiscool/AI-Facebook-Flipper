@@ -1,22 +1,19 @@
 import { NextResponse } from "next/server"
 import { ensureUser } from "@/lib/ensureUser"
-import { startScheduler } from "@/services/scanner/scheduler"
-import { runScan } from "@/services/scanner"
 
 export async function POST() {
   try {
-    const user = await ensureUser()
-
-    startScheduler(async () => {
-      await runScan(user.id)
-    })
-
-    runScan(user.id).catch((err) => {
-      console.error("[Scanner] Initial scan failed:", err)
-    })
+    await ensureUser()
 
     return NextResponse.json({
-      message: "Scanner started — initial scan running in background",
+      message: "Scanner runs via GitHub Actions every 30 minutes",
+      setup: [
+        "1. Go to https://github.com/Skrtiscool/AI-Facebook-Flipper/settings/secrets/actions",
+        "2. Add FB_EMAIL, FB_PASSWORD, and DATABASE_URL as repository secrets",
+        "3. Go to the Actions tab and enable the 'Facebook Scanner' workflow",
+        "4. Trigger a manual run to test it",
+      ],
+      docs: "https://github.com/Skrtiscool/AI-Facebook-Flipper#readme",
     })
   } catch (e: any) {
     return NextResponse.json(
