@@ -36,7 +36,7 @@ jobs:
       - name: Install Playwright Chromium
         run: npx playwright install chromium
 
-      - name: Restore Facebook cookies
+      - name: Restore Facebook cookies from cache
         id: cookie-cache
         uses: actions/cache@v4
         with:
@@ -44,6 +44,15 @@ jobs:
           key: fb-cookies-${{ hashFiles('.fb-cookies.json') }}
           restore-keys: |
             fb-cookies-
+
+      - name: Decode FB_COOKIES secret (if set)
+        env:
+          FB_COOKIES: ${{ secrets.FB_COOKIES }}
+        run: |
+          if [ -n "$FB_COOKIES" ] && [ ! -f .fb-cookies.json ]; then
+            echo "$FB_COOKIES" | base64 -d > .fb-cookies.json
+            echo "Restored cookies from secret"
+          fi
 
       - name: Facebook Login (if no valid cookies)
         env:

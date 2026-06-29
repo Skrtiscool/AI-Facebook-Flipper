@@ -5,15 +5,35 @@ import * as path from "path"
 const COOKIE_PATH = path.join(process.cwd(), ".fb-cookies.json")
 
 async function main() {
+  // Check if cookies already exist and are valid
+  if (fs.existsSync(COOKIE_PATH)) {
+    const raw = fs.readFileSync(COOKIE_PATH, "utf-8")
+    try {
+      const cookies = JSON.parse(raw)
+      const hasValid = cookies.some(
+        (c: any) =>
+          (c.name === "c_user" || c.name === "xs") &&
+          c.value &&
+          c.value.length > 0 &&
+          (!c.expires || c.expires > Date.now() / 1000)
+      )
+      if (hasValid) {
+        console.log("[Login] Valid cookies already exist — skipping login")
+        process.exit(0)
+      }
+    } catch {}
+  }
+
   const fbEmail = process.env.FB_EMAIL
   const fbPassword = process.env.FB_PASSWORD
 
   if (!fbEmail || !fbPassword) {
-    console.error("[Login] FB_EMAIL and FB_PASSWORD must be set")
+    console.log("[Login] No FB_EMAIL/FB_PASSWORD — cannot log in headlessly")
+    console.log("[Login] Run 'npm run loginfb:local' on your PC to log in manually")
     process.exit(1)
   }
 
-  console.log("[Login] Launching headless Chromium...")
+  console.log("[Login] Attempting headless Facebook login...")
   const browser = await chromium.launch({
     headless: true,
     args: ["--no-sandbox", "--disable-setuid-sandbox"],
@@ -27,7 +47,6 @@ async function main() {
 
   const page = await context.newPage()
 
-  console.log("[Login] Going to Facebook...")
   await page.goto("https://www.facebook.com", {
     waitUntil: "domcontentloaded",
     timeout: 30000,
@@ -55,41 +74,37 @@ async function main() {
         }
       }
     })
-
-    console.log("[Login] Submitted login form...")
   }
 
-  // Wait for login to complete (up to 60s)
   for (let i = 0; i < 40; i++) {
     const cookies = await context.cookies()
     const hasSession = cookies.some((c: any) => c.name === "c_user" && c.value)
 
     if (hasSession) {
       fs.writeFileSync(COOKIE_PATH, JSON.stringify(cookies, null, 2))
-      console.log("[Login] Successfully logged in and cookies saved!")
+      console.log("[Login] Headless login successful! Cookies saved.")
       await browser.close()
       process.exit(0)
     }
 
-    // Check for 2FA or checkpoint
     const url = page.url()
     if (url.includes("checkpoint") || url.includes("twofactor")) {
-      console.log("[Login] Login blocked by checkpoint/2FA. Cannot automate.")
-      console.log("[Login] Please run 'npm run loginfb:local' on your PC instead.")
-      await browser.close()
-      process.exit(1)
+      console.log("[Login] Blocked by checkpoint/2FA — cannot log in headlessly.")
+      break
     }
 
     await page.waitForTimeout(1500)
-    console.log(`[Login] Waiting for login... (${i + 1}/40)`)
+    console.log(`[Login] Waiting... (${i + 1}/40)`)
   }
 
-  console.log("[Login] Login timed out")
+  console.log("[Login] Headless login failed.")
+  console.log("[Login] Run 'npm run loginfb:local' on your PC to log in manually once.")
+  console.log("[Login] After that, GitHub Actions will reuse the saved cookies.")
   await browser.close()
   process.exit(1)
 }
 
 main().catch((err) => {
-  console.error("[Login] Fatal error:", err)
+  console.error("[Login] Error:", err)
   process.exit(1)
 })

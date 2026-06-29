@@ -9,7 +9,8 @@
     "lint": "eslint",
     "vercel-build": "prisma generate && next build",
     "scan": "npx tsx src/cli/scan.ts",
-    "loginfb": "npx tsx src/cli/loginfb.ts"
+    "loginfb": "npx tsx src/cli/loginfb.ts",
+    "loginfb:local": "npx tsx src/cli/login-local.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
