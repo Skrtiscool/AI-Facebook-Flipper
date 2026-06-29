@@ -50,6 +50,10 @@ export default function LandingPage() {
   }, [isLoaded, isSignedIn, router])
 
   async function startCheckout(plan: string) {
+    if (!isSignedIn) {
+      document.getElementById("sign-up-btn")?.click()
+      return
+    }
     setCheckoutLoading(plan)
     try {
       const res = await fetch("/api/stripe/create-checkout", {
@@ -109,7 +113,7 @@ export default function LandingPage() {
                     <Button variant="ghost" size="sm">Sign In</Button>
                   </SignInButton>
                   <SignUpButton mode="modal">
-                    <Button size="sm" className="gap-1">
+                    <Button id="sign-up-btn" size="sm" className="gap-1">
                       Get Started <ArrowRight className="h-3 w-3" />
                     </Button>
                   </SignUpButton>

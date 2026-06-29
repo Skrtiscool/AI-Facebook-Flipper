@@ -107,6 +107,9 @@ export default function AccountPage() {
         </CardContent>
       </Card>
 
+      {/* Subscription */}
+      <SubscriptionCard />
+
       <Card className="glass border-0">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-sm font-medium">
@@ -252,6 +255,74 @@ export default function AccountPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+function SubscriptionCard() {
+  const [sub, setSub] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetch("/api/stripe/subscription").then(r => r.json()).then(setSub).finally(() => setLoading(false))
+  }, [])
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get("checkout") === "success") {
+        window.history.replaceState({}, "", "/account")
+        fetch("/api/stripe/subscription").then(r => r.json()).then(setSub)
+      }
+    }
+  }, [])
+
+  if (loading) return null
+
+  const isPaid = sub?.plan !== "free"
+  const scansLeft = sub?.scanLimit ? sub.scanLimit - (sub.scansUsed || 0) : "Unlimited"
+
+  return (
+    <Card className="glass border-0">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm font-medium">
+          <User className="h-4 w-4" /> Subscription
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="font-medium capitalize">{sub?.planName || "Free"} Plan</p>
+            <p className="text-xs text-muted-foreground">{scansLeft} scans remaining this month</p>
+          </div>
+          <Badge className={isPaid ? "bg-emerald-500/20 text-emerald-400" : "bg-blue-500/20 text-blue-400"}>
+            {isPaid ? "Active" : "Free"}
+          </Badge>
+        </div>
+        {sub?.cancelAtPeriodEnd && (
+          <p className="text-xs text-orange-400">Cancels at period end</p>
+        )}
+        {sub?.currentPeriodEnd && (
+          <p className="text-xs text-muted-foreground">
+            Current period ends {new Date(sub.currentPeriodEnd).toLocaleDateString()}
+          </p>
+        )}
+        <div className="flex gap-2">
+          {isPaid ? (
+            <Button variant="outline" size="sm" onClick={async () => {
+              const res = await fetch("/api/stripe/portal")
+              const data = await res.json()
+              if (data.url) window.location.href = data.url
+            }}>
+              Manage Subscription
+            </Button>
+          ) : (
+            <Button size="sm" className="gap-1" onClick={() => window.location.href = "/#pricing"}>
+              Upgrade Plan
+            </Button>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 
