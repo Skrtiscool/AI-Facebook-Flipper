@@ -105,6 +105,15 @@ export async function runScan(): Promise<{
         for (const listing of listings) {
           totalScanned++
 
+          // Skip obvious fake/negotiation prices
+          const p = listing.price
+          const pStr = String(Math.round(p))
+          const allSameDigit = pStr.length > 1 && pStr.split("").every(d => d === pStr[0])
+          const isSequential = pStr === "12345" || pStr === "123456" || pStr === "1234567"
+          if (p <= 1 || p <= 3 || allSameDigit || isSequential) {
+            continue
+          }
+
           const analysis = await analyzeWithFallback({
             title: listing.title,
             description: listing.description,
