@@ -13,6 +13,8 @@ model User {
   name                 String?
   imageUrl             String?
   clerkId              String                 @unique
+  stripeCustomerId     String?
+  scanCountThisMonth   Int                    @default(0)
   createdAt            DateTime               @default(now())
   updatedAt            DateTime               @updatedAt
   deals                Deal[]
@@ -144,6 +146,7 @@ model Alert {
 
 model ScannerRun {
   id              String      @id @default(cuid())
+  userId          String?
   startedAt       DateTime    @default(now())
   completedAt     DateTime?
   listingsScanned Int         @default(0)
@@ -175,13 +178,15 @@ model SavedSearch {
 }
 
 model Subscription {
-  id            String   @id @default(cuid())
-  userId        String   @unique
-  user          User     @relation(fields: [userId], references: [id])
-  plan          String
-  status        String
-  stripeId      String?
-  currentPeriod DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id])
+  plan             String
+  status           String
+  stripeId         String?
+  stripeCustomerId String?
+  currentPeriod    DateTime?
+  cancelAtPeriodEnd Boolean @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }

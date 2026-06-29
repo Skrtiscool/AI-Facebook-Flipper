@@ -5,14 +5,13 @@ import { runScan } from "@/services/scanner"
 
 export async function POST() {
   try {
-    await ensureUser()
+    const user = await ensureUser()
 
     startScheduler(async () => {
-      await runScan()
+      await runScan(user.id)
     })
 
-    // Run first scan in background so we respond fast
-    runScan().catch((err) => {
+    runScan(user.id).catch((err) => {
       console.error("[Scanner] Initial scan failed:", err)
     })
 

@@ -5,6 +5,7 @@ import { analyzeWithFallback } from "@/services/aiAnalyzer"
 import { prisma } from "@/lib/prisma"
 import { sendDealAlert } from "@/services/notifications/discord"
 import { updateScanProgress, resetScanProgress } from "./progress"
+import { PLANS, PlanId } from "@/lib/stripe"
 import type { AnalysisResult } from "@/services/aiAnalyzer"
 
 let browser: Browser | null = null
@@ -26,7 +27,7 @@ async function getBrowser(): Promise<Browser> {
   return browser
 }
 
-export async function runScan(): Promise<{
+export async function runScan(userId?: string): Promise<{
   scanned: number
   found: number
 }> {
@@ -37,8 +38,35 @@ export async function runScan(): Promise<{
 
   scanInProgress = true
   resetScanProgress()
+
+  // Check usage limits
+  if (userId) {
+    const user = await prisma.user.findUnique({ where: { id: userId } })
+    if (user) {
+      const sub = await prisma.subscription.findUnique({ where: { userId } })
+      const plan = (sub?.plan as PlanId) || "free"
+      const limit = PLANS[plan].scansPerMonth
+
+      const monthStart = new Date()
+      monthStart.setDate(1)
+      monthStart.setHours(0, 0, 0, 0)
+      const scanCount = await prisma.scannerRun.count({
+        where: {
+          userId,
+          startedAt: { gte: monthStart },
+          status: "completed",
+        },
+      })
+
+      if (scanCount >= limit) {
+        console.log(`[Scanner] User ${userId} hit scan limit (${limit}), skipping`)
+        scanInProgress = false
+        return { scanned: 0, found: 0 }
+      }
+    }
+  }
   const scanRun = await prisma.scannerRun.create({
-    data: { status: "running" },
+    data: { status: "running", ...(userId ? { userId } : {}) },
   })
 
   let totalScanned = 0

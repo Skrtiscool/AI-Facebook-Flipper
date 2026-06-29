@@ -41,12 +41,31 @@ const stagger = {
 export default function LandingPage() {
   const { isSignedIn, isLoaded } = useUser()
   const router = useRouter()
+  const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null)
 
   useEffect(() => {
     if (isLoaded && isSignedIn) {
       router.push("/dashboard")
     }
   }, [isLoaded, isSignedIn, router])
+
+  async function startCheckout(plan: string) {
+    setCheckoutLoading(plan)
+    try {
+      const res = await fetch("/api/stripe/create-checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan }),
+      })
+      const data = await res.json()
+      if (data.url) window.location.href = data.url
+      else alert(data.error || "Checkout failed")
+    } catch (e: any) {
+      alert("Checkout error: " + e.message)
+    } finally {
+      setCheckoutLoading(null)
+    }
+  }
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
@@ -343,15 +362,24 @@ export default function LandingPage() {
                     <span className="text-4xl font-bold">${tier.price}</span>
                     <span className="text-sm text-muted-foreground">/{tier.period}</span>
                   </div>
-                  <Button
-                    className={cn(
-                      "mt-6 w-full",
-                      tier.highlighted ? "" : "variant-outline"
-                    )}
-                    variant={tier.highlighted ? "default" : "outline"}
-                  >
-                    {tier.cta}
-                  </Button>
+                  {tier.price === 0 ? (
+                    <SignUpButton mode="modal">
+                      <Button className="mt-6 w-full" variant="outline">Get Started</Button>
+                    </SignUpButton>
+                  ) : (
+                    <Button
+                      className={cn("mt-6 w-full")}
+                      variant={tier.highlighted ? "default" : "outline"}
+                      disabled={checkoutLoading === tier.id}
+                      onClick={() => startCheckout(tier.id)}
+                    >
+                      {checkoutLoading === tier.id ? (
+                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                      ) : (
+                        tier.cta
+                      )}
+                    </Button>
+                  )}
                   <ul className="mt-6 space-y-3">
                     {tier.features.map((feature, j) => (
                       <li key={j} className="flex items-start gap-3 text-sm">
@@ -478,44 +506,48 @@ const steps = [
 
 const pricingTiers = [
   {
+    id: "free" as const,
     name: "Free",
     price: 0,
     period: "month",
     description: "Perfect for getting started",
     features: [
-      "5 analyses per month",
-      "Basic profit calculator",
-      "Market value estimates",
-      "Email support",
+      "10 scans per month",
+      "Basic analysis scores",
+      "Discord alerts",
+      "Saved deals pipeline",
     ],
     cta: "Get Started",
   },
   {
+    id: "pro" as const,
     name: "Pro",
-    price: 19,
+    price: 9.99,
     period: "month",
     description: "For serious resellers",
     highlighted: true,
     features: [
-      "Unlimited analyses",
-      "AI image recognition",
-      "Advanced market data",
-      "Deal alerts",
+      "Unlimited scans",
+      "AI-powered analysis",
+      "Discord alerts",
+      "Price drop detection",
+      "CSV export",
       "Priority support",
     ],
     cta: "Start Free Trial",
   },
   {
-    name: "Elite",
-    price: 49,
+    id: "biz" as const,
+    name: "Business",
+    price: 24.99,
     period: "month",
-    description: "For power users & teams",
+    description: "For power flippers & teams",
     features: [
       "Everything in Pro",
+      "Auto-respond to sellers",
+      "Auto-list to eBay",
+      "Team accounts (3 seats)",
       "API access",
-      "Marketplace integrations",
-      "AI negotiation assistant",
-      "Discord alerts",
       "Dedicated support",
     ],
     cta: "Start Free Trial",
