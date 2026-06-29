@@ -20,10 +20,13 @@ export async function GET() {
       where: { userId: user.id, active: true },
     })
 
+    const lastError = lastRun?.status === "failed" ? lastRun.error : null
+
     return NextResponse.json({
       running: isSchedulerRunning(),
       facebookConnected: hasSavedSession(),
       lastRun: lastRun || null,
+      lastError,
       totalDeals,
       activeAlerts: alertsCount,
     })

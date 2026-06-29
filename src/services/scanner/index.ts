@@ -1,4 +1,4 @@
-import { chromium, Browser } from "playwright"
+import { chromium, Browser, firefox } from "playwright"
 import { ensureAuthenticated, saveCookies } from "./auth"
 import { searchMarketplace, MarketplaceListing } from "./facebook"
 import { analyzeWithFallback } from "@/services/aiAnalyzer"
@@ -11,11 +11,16 @@ let scanInProgress = false
 
 async function getBrowser(): Promise<Browser> {
   if (!browser || !browser.isConnected()) {
-    browser = await chromium.launch({
-      channel: "chrome",
+    const launchOpts = {
       headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
-    })
+    }
+    try {
+      browser = await chromium.launch(launchOpts)
+    } catch {
+      console.log("[Scanner] Chromium failed, trying Firefox...")
+      browser = await firefox.launch(launchOpts)
+    }
   }
   return browser
 }

@@ -26,6 +26,7 @@ interface ScannerStatus {
   running: boolean
   facebookConnected: boolean
   lastRun: { startedAt: string; listingsScanned: number; dealsFound: number } | null
+  lastError: string | null
   totalDeals: number
   activeAlerts: number
 }
@@ -136,6 +137,18 @@ export default function DashboardPage() {
           )}
         </Button>
       </div>
+
+      {/* Last scan error */}
+      {status?.lastError && (
+        <Card className="border-0 bg-red-500/10 ring-1 ring-red-500/30">
+          <CardContent className="flex items-start gap-3 p-4">
+            <div className="flex-1 text-sm">
+              <p className="font-medium text-red-400">Last scan failed</p>
+              <p className="mt-1 text-xs text-red-300/80 font-mono break-all">{status.lastError}</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Status card */}
       {status && !status.facebookConnected && (
