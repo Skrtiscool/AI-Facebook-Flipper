@@ -12,6 +12,7 @@ let scanInProgress = false
 async function getBrowser(): Promise<Browser> {
   if (!browser || !browser.isConnected()) {
     browser = await chromium.launch({
+      channel: "chrome",
       headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
     })
@@ -92,17 +93,25 @@ export async function runScan(): Promise<{
 
     await saveCookies(context)
 
+    const CONCURRENCY = 3
+
     for (const alert of activeAlerts) {
       console.log(`[Scanner] Processing alert: ${alert.name}`)
 
-      for (const keyword of alert.keywords) {
-        const listings = await searchMarketplace(
-          context,
-          keyword,
-          alert.maxPrice ?? undefined
+      const chunks: string[][] = []
+      for (let i = 0; i < alert.keywords.length; i += CONCURRENCY) {
+        chunks.push(alert.keywords.slice(i, i + CONCURRENCY))
+      }
+
+      for (const chunk of chunks) {
+        const results = await Promise.all(
+          chunk.map((keyword) =>
+            searchMarketplace(context, keyword, alert.maxPrice ?? undefined)
+          )
         )
 
-        for (const listing of listings) {
+        for (const listings of results) {
+          for (const listing of listings) {
           totalScanned++
 
           // Skip obvious fake/negotiation prices
@@ -159,6 +168,7 @@ export async function runScan(): Promise<{
                 }
               }
             }
+          }
           }
         }
       }
