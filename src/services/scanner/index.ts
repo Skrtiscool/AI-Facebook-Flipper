@@ -133,25 +133,66 @@ export async function runScan(): Promise<{
           })
 
           if (analysis.score >= (alert.minScore ?? 40) && analysis.profit >= (alert.minProfit ?? 0)) {
-            const deal = await prisma.deal.create({
-              data: {
-                userId: alert.userId,
-                ...(alert.id !== "default" ? { alertId: alert.id } : {}),
-                title: listing.title,
-                price: listing.price,
-                estimatedValue: analysis.estimatedValue,
-                profit: analysis.profit,
-                score: analysis.score,
-                recommendation: analysis.recommendation,
-                reason: analysis.reason,
-                confidence: analysis.confidence,
-                platform: "facebook",
-                listingUrl: listing.listingUrl,
-                imageUrls: listing.imageUrls,
-                location: listing.location,
-                condition: listing.condition,
-              },
-            })
+            // Check if this listing already exists (by URL)
+            const existing = listing.listingUrl
+              ? await prisma.deal.findFirst({ where: { listingUrl: listing.listingUrl } })
+              : null
+
+            let deal
+            if (existing) {
+              // Price drop detection
+              const oldPrice = existing.price
+              if (listing.price < oldPrice) {
+                await prisma.priceChange.create({
+                  data: {
+                    dealId: existing.id,
+                    oldPrice,
+                    newPrice: listing.price,
+                  },
+                })
+                await prisma.deal.update({
+                  where: { id: existing.id },
+                  data: {
+                    price: listing.price,
+                    lastSeenPrice: oldPrice,
+                    lastPriceDrop: new Date(),
+                    scanCount: { increment: 1 },
+                    priceHistory: [
+                      ...(Array.isArray(existing.priceHistory) ? existing.priceHistory : []),
+                      { price: listing.price, date: new Date().toISOString() },
+                    ],
+                    imageUrls: listing.imageUrls,
+                  },
+                })
+              } else {
+                await prisma.deal.update({
+                  where: { id: existing.id },
+                  data: { scanCount: { increment: 1 } },
+                })
+              }
+              deal = existing
+            } else {
+              deal = await prisma.deal.create({
+                data: {
+                  userId: alert.userId,
+                  ...(alert.id !== "default" ? { alertId: alert.id } : {}),
+                  title: listing.title,
+                  price: listing.price,
+                  estimatedValue: analysis.estimatedValue,
+                  profit: analysis.profit,
+                  score: analysis.score,
+                  recommendation: analysis.recommendation,
+                  reason: analysis.reason,
+                  confidence: analysis.confidence,
+                  platform: "facebook",
+                  listingUrl: listing.listingUrl,
+                  imageUrls: listing.imageUrls,
+                  location: listing.location,
+                  condition: listing.condition,
+                  priceHistory: [{ price: listing.price, date: new Date().toISOString() }],
+                },
+              })
+            }
 
             totalFound++
 

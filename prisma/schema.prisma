@@ -48,6 +48,29 @@ model Deal {
   saved          Boolean  @default(false)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+
+  notes          String?
+  category       String?
+  status         String   @default("watching")
+  shippingCost   Float?
+  fees           Float?
+  actualProfit   Float?
+  messagedAt     DateTime?
+  lastSeenPrice  Float?
+  priceHistory   Json?
+  scanCount      Int      @default(1)
+  lastPriceDrop  DateTime?
+  priceChanges   PriceChange[]
+}
+
+model PriceChange {
+  id        String   @id @default(cuid())
+  dealId    String
+  deal      Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  oldPrice  Float
+  newPrice  Float
+  notified  Boolean  @default(false)
+  createdAt DateTime @default(now())
 }
 
 model Alert {
@@ -63,6 +86,7 @@ model Alert {
   platforms  String[] @default(["facebook"])
   active     Boolean  @default(true)
   lastRunAt  DateTime?
+  scanInterval Int?   @default(30)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   deals      Deal[]
