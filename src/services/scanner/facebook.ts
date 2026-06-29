@@ -114,12 +114,14 @@ export async function searchMarketplace(
           if (match && match.length > 3) title = match
         }
 
-        // Extract price
+        // Extract price — match only properly formatted prices ($X, $XX, $XXX, $X,XXX, etc.)
         let price = 0
-        const priceMatch = allText.match(/\$([0-9,]+\.?\d*)/)
+        const priceMatch = allText.match(/\$([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?)/)
         if (priceMatch) {
           price = parseFloat(priceMatch[1].replace(/,/g, ""))
         }
+        // Sanity check: reject prices over $999,999
+        if (price > 999999) price = 0
 
         // Extract image
         const img = container.querySelector("img")

@@ -87,64 +87,81 @@ function getBrandInfo(title: string): { multiplier: number; reason: string } {
 
 function generateFallbackAnalysis(input: AnalysisInput): AnalysisResult {
   const brand = getBrandInfo(input.title)
-
   const price = input.price
   const cond = input.condition.toLowerCase()
 
-  // Condition multiplier
   const condMul = /new|like new|excellent/i.test(cond) ? 1.3
     : /good|gently|used/i.test(cond) ? 1.1
     : /fair|poor|for parts/i.test(cond) ? 0.6
     : 1.0
 
-  // Estimated resale value varies based on price range
   let estMul = brand.multiplier * condMul
-  if (price < 20) estMul *= 0.8 // cheap items are harder to flip
-  else if (price > 500) estMul *= 1.1 // expensive items have thinner margins
-  else if (price > 1000) estMul *= 0.9 // very expensive: smaller buyer pool
+  if (price < 20) estMul *= 0.8
+  else if (price > 500) estMul *= 1.1
+  else if (price > 1000) estMul *= 0.9
 
   const estimatedValue = Math.round(price * estMul)
   const profit = estimatedValue - price
   const margin = price > 0 ? profit / price : 0
 
-  // Score: 0-100 based on multiple factors
-  let score = 50 // base
+  // Compute fine-grained score from many factors
+  let score = 0
 
-  // Margin contribution (0-30 points)
-  if (margin > 0.5) score += 30
-  else if (margin > 0.3) score += 20
-  else if (margin > 0.15) score += 10
-  else if (margin > 0) score += 5
-  else score -= 15 // negative margin is bad
+  // Margin points (0–35)
+  if (margin > 0.8) score += 35
+  else if (margin > 0.5) score += 28
+  else if (margin > 0.35) score += 22
+  else if (margin > 0.2) score += 16
+  else if (margin > 0.1) score += 10
+  else if (margin > 0) score += 4
+  else score -= 10
 
-  // Brand contribution (0-20 points)
-  score += Math.round((brand.multiplier - 1) * 50)
+  // Brand points (0–20)
+  const brandPoints = Math.round((brand.multiplier - 1) * 40)
+  score += Math.max(0, brandPoints)
 
-  // Condition contribution (0-15 points)
+  // Condition points (0–15)
   if (condMul > 1.2) score += 15
   else if (condMul > 1.05) score += 10
-  else if (condMul < 0.8) score -= 10
-  else score += 5
+  else if (condMul > 0.95) score += 6
+  else score += 2
 
-  // Price sweet spot (0-15 points)
-  if (price >= 50 && price <= 300) score += 15
-  else if (price >= 20 && price < 50) score += 5
-  else if (price > 300 && price <= 800) score += 10
-  else score -= 5
+  // Price sweet-spot points (0–15)
+  if (price >= 40 && price <= 80) score += 15
+  else if (price >= 20 && price < 40) score += 10
+  else if (price > 80 && price <= 150) score += 12
+  else if (price > 150 && price <= 300) score += 8
+  else if (price > 300 && price <= 600) score += 4
+  else if (price > 600 && price <= 1200) score += 2
+  else if (price <= 10) score -= 5
+  else score -= 2
+
+  // Absolute profit bonus (0–15)
+  if (profit > 1000) score += 15
+  else if (profit > 500) score += 12
+  else if (profit > 200) score += 8
+  else if (profit > 100) score += 5
+  else if (profit > 50) score += 3
+  else if (profit > 20) score += 1
+
+  // Title length indicates listing quality
+  const wordCount = input.title.split(/\s+/).length
+  if (wordCount >= 6) score += 5
+  else if (wordCount >= 3) score += 2
 
   score = Math.max(0, Math.min(100, score))
 
-  const recommendation: "buy" | "pass" | "maybe" = score >= 70 ? "buy" : score >= 40 ? "maybe" : "pass"
+  const recommendation: "buy" | "pass" | "maybe" = score >= 72 ? "buy" : score >= 45 ? "maybe" : "pass"
 
   return {
     estimatedValue,
     profit,
     score,
     recommendation,
-    reason: `${brand.reason}. ${recommendation === "buy" ? "Strong flipping opportunity." : recommendation === "maybe" ? "Decent potential, check condition." : "Weak margins on this item."}`,
-    confidence: 0.35 + (score / 100) * 0.3,
+    reason: `${brand.reason}. ${recommendation === "buy" ? "Strong flipping opportunity — good margins." : recommendation === "maybe" ? "Decent potential, worth a closer look." : "Low margins, probably not worth it."}`,
+    confidence: 0.3 + (score / 100) * 0.35,
     marketAnalysis: [
-      `Estimated resale: ~$${estimatedValue} (${Math.round(margin * 100)}% margin)`,
+      `Est. resale: ~$${estimatedValue} (${Math.round(margin * 100)}% margin)`,
       `Condition: ${input.condition || "Unknown"}`,
       `Score: ${score}/100 — ${recommendation.toUpperCase()}`,
     ],
