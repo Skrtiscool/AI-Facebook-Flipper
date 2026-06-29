@@ -61,6 +61,56 @@ model Deal {
   scanCount      Int      @default(1)
   lastPriceDrop  DateTime?
   priceChanges   PriceChange[]
+
+  offerAmount     Float?
+  offerDate       DateTime?
+  sellerResponse  String?
+  expectedSalePrice Float?
+  dateBought      DateTime?
+  dateSold        DateTime?
+  storageLocation String?
+  costBasis       Float?
+  roi             Float?
+  daysInInventory Int?
+
+  dealTags   DealTag[]
+  activities DealActivity[]
+}
+
+model Tag {
+  id        String    @id @default(cuid())
+  name      String
+  color     String    @default("#6366f1")
+  userId    String
+  dealTags  DealTag[]
+  createdAt DateTime  @default(now())
+}
+
+model DealTag {
+  dealId String
+  tagId  String
+  deal   Deal @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  tag    Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([dealId, tagId])
+}
+
+model DealActivity {
+  id        String   @id @default(cuid())
+  dealId    String
+  deal      Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  type      String
+  message   String
+  metadata  Json?
+  createdAt DateTime @default(now())
+}
+
+model SavedFilter {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  filters   String
+  createdAt DateTime @default(now())
 }
 
 model PriceChange {

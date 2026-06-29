@@ -12,6 +12,7 @@ import {
   Sparkles,
   Menu,
   LogOut,
+  TrendingUp,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
@@ -20,7 +21,8 @@ import { cn } from "@/lib/utils"
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/analyze", label: "Analyze Item", icon: Search },
-  { href: "/saved-deals", label: "Saved Deals", icon: Bookmark },
+  { href: "/saved-deals", label: "Deal Pipeline", icon: Bookmark },
+  { href: "/analytics", label: "Analytics", icon: TrendingUp },
   { href: "/alerts", label: "Alerts", icon: Bell },
   { href: "/account", label: "Account", icon: User },
 ]

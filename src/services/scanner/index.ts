@@ -4,6 +4,7 @@ import { searchMarketplace, MarketplaceListing } from "./facebook"
 import { analyzeWithFallback } from "@/services/aiAnalyzer"
 import { prisma } from "@/lib/prisma"
 import { sendDealAlert } from "@/services/notifications/discord"
+import { updateScanProgress, resetScanProgress } from "./progress"
 import type { AnalysisResult } from "@/services/aiAnalyzer"
 
 let browser: Browser | null = null
@@ -35,6 +36,7 @@ export async function runScan(): Promise<{
   }
 
   scanInProgress = true
+  resetScanProgress()
   const scanRun = await prisma.scannerRun.create({
     data: { status: "running" },
   })
@@ -100,6 +102,9 @@ export async function runScan(): Promise<{
 
     const CONCURRENCY = 3
 
+    const totalKeywords = activeAlerts.reduce((s, a) => s + a.keywords.length, 0)
+    let keywordsDone = 0
+
     for (const alert of activeAlerts) {
       console.log(`[Scanner] Processing alert: ${alert.name}`)
 
@@ -109,6 +114,14 @@ export async function runScan(): Promise<{
       }
 
       for (const chunk of chunks) {
+        keywordsDone += chunk.length
+        updateScanProgress({
+          status: "running",
+          currentKeyword: chunk[0],
+          keywordsDone,
+          keywordsTotal: totalKeywords,
+          message: `Scanning "${chunk[0]}"...`,
+        })
         const results = await Promise.all(
           chunk.map((keyword) =>
             searchMarketplace(context, keyword, alert.maxPrice ?? undefined)
@@ -116,6 +129,10 @@ export async function runScan(): Promise<{
         )
 
         for (const listings of results) {
+          updateScanProgress({
+            listingsFound: totalScanned + listings.length,
+            message: `Scanning "${chunk[0]}" — found ${listings.length} listings`,
+          })
           for (const listing of listings) {
           totalScanned++
 
@@ -153,6 +170,14 @@ export async function runScan(): Promise<{
                     dealId: existing.id,
                     oldPrice,
                     newPrice: listing.price,
+                  },
+                })
+                await prisma.dealActivity.create({
+                  data: {
+                    dealId: existing.id,
+                    type: "price_drop",
+                    message: `Price dropped from $${oldPrice} to $${listing.price}`,
+                    metadata: { oldPrice, newPrice: listing.price },
                   },
                 })
                 await prisma.deal.update({
@@ -197,9 +222,18 @@ export async function runScan(): Promise<{
                   priceHistory: [{ price: listing.price, date: new Date().toISOString() }],
                 },
               })
+              await prisma.dealActivity.create({
+                data: {
+                  dealId: deal.id,
+                  type: "found",
+                  message: `Deal found — $${listing.price} with score ${analysis.score}/100`,
+                  metadata: { price: listing.price, score: analysis.score },
+                },
+              })
             }
 
             totalFound++
+            updateScanProgress({ dealsFound: totalFound, message: `Found ${totalFound} deals so far` })
 
             const channels = await prisma.notificationChannel.findMany({
               where: { userId: alert.userId, enabled: true },
@@ -242,8 +276,17 @@ export async function runScan(): Promise<{
     console.log(
       `[Scanner] Scan complete — ${totalScanned} listings, ${totalFound} deals found`
     )
+    updateScanProgress({
+      status: "completed",
+      message: `Scan complete — ${totalScanned} listings, ${totalFound} deals`,
+    })
   } catch (error) {
     console.error("[Scanner] Scan error:", error)
+    updateScanProgress({
+      status: "failed",
+      message: `Scan failed: ${error}`,
+      error: String(error),
+    })
     await prisma.scannerRun.update({
       where: { id: scanRun.id },
       data: {

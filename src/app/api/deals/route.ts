@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { ensureUser } from "@/lib/ensureUser"
 
+const DEAL_INCLUDE = {
+  dealTags: { include: { tag: true } },
+  activities: { orderBy: { createdAt: "desc" as const }, take: 50 },
+  priceChanges: { orderBy: { createdAt: "desc" as const }, take: 10 },
+}
+
 export async function GET(request: NextRequest) {
   try {
     const user = await ensureUser()
@@ -22,6 +28,7 @@ export async function GET(request: NextRequest) {
       where,
       orderBy: [{ saved: "desc" }, { scannedAt: "desc" }],
       take: 100,
+      include: DEAL_INCLUDE,
     })
 
     return NextResponse.json(deals)
@@ -34,21 +41,57 @@ export async function PATCH(request: NextRequest) {
   try {
     await ensureUser()
     const body = await request.json()
-    const { id, ...data } = body
+    const { id, addTagId, removeTagId, ...data } = body
     if (!id) return NextResponse.json({ error: "id required" }, { status: 400 })
+
+    // Handle tag operations
+    if (addTagId) {
+      await prisma.dealTag.upsert({
+        where: { dealId_tagId: { dealId: id, tagId: addTagId } },
+        create: { dealId: id, tagId: addTagId },
+        update: {},
+      })
+    }
+    if (removeTagId) {
+      await prisma.dealTag.deleteMany({
+        where: { dealId: id, tagId: removeTagId },
+      })
+    }
+
+    // Create activity for status change
+    if (data.status) {
+      const current = await prisma.deal.findUnique({ where: { id }, select: { status: true } })
+      if (current && current.status !== data.status) {
+        await prisma.dealActivity.create({
+          data: {
+            dealId: id,
+            type: "status_change",
+            message: `Status changed from ${current.status} to ${data.status}`,
+            metadata: { from: current.status, to: data.status },
+          },
+        })
+      }
+    }
+
+    // Build update data
+    const updateData: Record<string, unknown> = {}
+    const scalarFields = [
+      "read", "saved", "notes", "category", "status",
+      "shippingCost", "fees", "actualProfit", "offerAmount",
+      "sellerResponse", "expectedSalePrice", "storageLocation",
+      "costBasis", "roi", "daysInInventory",
+    ]
+    for (const field of scalarFields) {
+      if (data[field] !== undefined) updateData[field] = data[field]
+    }
+    if (data.offerDate !== undefined) updateData.offerDate = data.offerDate ? new Date(data.offerDate) : null
+    if (data.dateBought !== undefined) updateData.dateBought = data.dateBought ? new Date(data.dateBought) : null
+    if (data.dateSold !== undefined) updateData.dateSold = data.dateSold ? new Date(data.dateSold) : null
 
     const deal = await prisma.deal.update({
       where: { id },
-      data: {
-        ...(data.read !== undefined && { read: data.read }),
-        ...(data.saved !== undefined && { saved: data.saved }),
-        ...(data.notes !== undefined && { notes: data.notes }),
-        ...(data.category !== undefined && { category: data.category }),
-        ...(data.status !== undefined && { status: data.status }),
-        ...(data.shippingCost !== undefined && { shippingCost: data.shippingCost }),
-        ...(data.fees !== undefined && { fees: data.fees }),
-        ...(data.actualProfit !== undefined && { actualProfit: data.actualProfit }),
-      },
+      data: updateData,
+      include: DEAL_INCLUDE,
     })
 
     return NextResponse.json(deal)
@@ -63,10 +106,14 @@ export async function DELETE(request: NextRequest) {
     const body = await request.json()
     if (body.id) {
       await prisma.priceChange.deleteMany({ where: { dealId: body.id } })
+      await prisma.dealActivity.deleteMany({ where: { dealId: body.id } })
+      await prisma.dealTag.deleteMany({ where: { dealId: body.id } })
       await prisma.deal.delete({ where: { id: body.id } })
     } else if (body.all) {
       const deals = await prisma.deal.findMany({ where: { userId: body.userId } })
       await prisma.priceChange.deleteMany({ where: { dealId: { in: deals.map(d => d.id) } } })
+      await prisma.dealActivity.deleteMany({ where: { dealId: { in: deals.map(d => d.id) } } })
+      await prisma.dealTag.deleteMany({ where: { dealId: { in: deals.map(d => d.id) } } })
       await prisma.deal.deleteMany({ where: { userId: body.userId } })
     }
     return NextResponse.json({ success: true })

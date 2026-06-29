@@ -217,6 +217,47 @@ export default function AccountPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Browser push notifications */}
+      <Card className="glass border-0">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Globe className="h-5 w-5" /> Browser Push Notifications
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground mb-4">
+            Get notified in your browser when new deals are found during scans.
+          </p>
+          <Button id="push-subscribe-btn" variant="outline" onClick={async () => {
+            try {
+              const reg = await navigator.serviceWorker?.ready
+              if (!reg) { alert("Service worker not supported"); return }
+              const sub = await reg.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array("BEl62iUYgUiv0I2K1i64QfJp5KkfVJzXGqYXxVKxYQJQJQJQJQJQJQJQJQJQJQJQJQJQJQJQJQ"),
+              })
+              await fetch("/api/notifications/push", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ subscription: sub.toJSON() }),
+              })
+              alert("Push notifications enabled!")
+            } catch (e: any) {
+              alert(`Push notification error: ${e.message}`)
+            }
+          }}>
+            Enable Push Notifications
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   )
+}
+
+function urlBase64ToUint8Array(base64String: string) {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4)
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/")
+  const rawData = window.atob(base64)
+  return Uint8Array.from([...rawData].map((char) => char.charCodeAt(0)))
 }

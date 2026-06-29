@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { motion } from "framer-motion"
 import {
   Play,
@@ -15,6 +15,7 @@ import {
   Check,
   Sparkles,
   Globe,
+  Loader2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -49,11 +50,23 @@ interface Deal {
   saved: boolean
 }
 
+interface ScanProgress {
+  status: string
+  currentKeyword: string | null
+  keywordsDone: number
+  keywordsTotal: number
+  listingsFound: number
+  dealsFound: number
+  message: string
+}
+
 export default function DashboardPage() {
   const [status, setStatus] = useState<ScannerStatus | null>(null)
   const [deals, setDeals] = useState<Deal[]>([])
   const [loading, setLoading] = useState(true)
   const [starting, setStarting] = useState(false)
+  const [scanProgress, setScanProgress] = useState<ScanProgress | null>(null)
+  const eventSourceRef = useRef<EventSource | null>(null)
 
   async function fetchData() {
     try {
@@ -74,7 +87,22 @@ export default function DashboardPage() {
   useEffect(() => {
     fetchData().catch(() => {})
     const interval = setInterval(() => { fetchData().catch(() => {}) }, 10000)
-    return () => clearInterval(interval)
+
+    // SSE for scan progress
+    const es = new EventSource("/api/scanner/progress")
+    es.onmessage = (e) => {
+      try {
+        const p = JSON.parse(e.data) as ScanProgress
+        setScanProgress(p)
+        if (p.status === "completed" || p.status === "failed") {
+          setTimeout(() => { es.close(); eventSourceRef.current = null; fetchData() }, 1000)
+        }
+      } catch { /* ignore parse errors */ }
+    }
+    es.onerror = () => { es.close() }
+    eventSourceRef.current = es
+
+    return () => { clearInterval(interval); es.close() }
   }, [])
 
   async function toggleScanner() {
@@ -200,6 +228,31 @@ export default function DashboardPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Scan progress */}
+      {scanProgress && scanProgress.status === "running" && (
+        <Card className="border-0 bg-blue-500/10 ring-1 ring-blue-500/30">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <Loader2 className="h-5 w-5 text-blue-400 animate-spin shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-blue-400">{scanProgress.message}</p>
+                <div className="flex gap-4 mt-1 text-xs text-blue-300/70">
+                  <span>Keywords: {scanProgress.keywordsDone}/{scanProgress.keywordsTotal}</span>
+                  <span>Listings: {scanProgress.listingsFound}</span>
+                  <span>Deals: {scanProgress.dealsFound}</span>
+                </div>
+                {scanProgress.keywordsTotal > 0 && (
+                  <div className="mt-2 h-1.5 bg-blue-950 rounded-full overflow-hidden">
+                    <div className="h-full bg-blue-500 rounded-full transition-all duration-500"
+                      style={{ width: `${(scanProgress.keywordsDone / scanProgress.keywordsTotal) * 100}%` }} />
+                  </div>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3 sm:gap-4">
