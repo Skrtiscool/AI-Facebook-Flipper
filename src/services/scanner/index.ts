@@ -118,7 +118,7 @@ export async function runScan(): Promise<{
             const deal = await prisma.deal.create({
               data: {
                 userId: alert.userId,
-                alertId: alert.id,
+                ...(alert.id !== "default" ? { alertId: alert.id } : {}),
                 title: listing.title,
                 price: listing.price,
                 estimatedValue: analysis.estimatedValue,

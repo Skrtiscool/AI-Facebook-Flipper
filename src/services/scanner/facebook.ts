@@ -41,78 +41,89 @@ export async function searchMarketplace(
 
     // Scroll to trigger lazy loading
     await page.evaluate(async () => {
-      for (let i = 0; i < 8; i++) {
-        window.scrollBy(0, 1500)
-        await new Promise((r) => setTimeout(r, 800))
+      for (let i = 0; i < 5; i++) {
+        window.scrollBy(0, 1200)
+        await new Promise((r) => setTimeout(r, 500))
       }
     })
 
     await page.waitForTimeout(2000)
 
-    // Try multiple selector strategies to find listing cards
+    // Extract listings using broader selectors
     const listings = await page.evaluate(() => {
       const items: MarketplaceListing[] = []
+      const seen = new Set<string>()
 
-      // Strategy 1: Find all article or div elements that look like listing cards
-      const cardSelectors = [
-        '[data-render-location="marketplace_search"]',
-        "article",
-        'a[href*="/marketplace/item/"]',
-        'div[role="article"]',
-      ]
+      // Find all clickable cards that link to marketplace items
+      const links = document.querySelectorAll<HTMLAnchorElement>(
+        'a[href*="/marketplace/item/"]'
+      )
 
-      let cards: Element[] = []
-      for (const sel of cardSelectors) {
-        const found = document.querySelectorAll(sel)
-        if (found.length > 0) {
-          cards = Array.from(found)
-          break
-        }
-      }
-
-      // Fallback: look for any link with marketplace/item in href
-      if (cards.length === 0) {
-        const links = document.querySelectorAll('a[href*="/marketplace/item/"]')
-        cards = Array.from(links)
-      }
-
-      const processed = new Set<string>()
-
-      for (const card of cards) {
-        const link = card.tagName === "A" ? card : card.querySelector("a")
-        const href = link?.getAttribute("href") || ""
+      for (const link of links) {
+        const href = link.getAttribute("href") || ""
         const fullUrl = href.startsWith("http") ? href : `https://www.facebook.com${href}`
+        if (seen.has(fullUrl)) continue
+        seen.add(fullUrl)
 
-        // Deduplicate by URL
-        if (processed.has(fullUrl)) continue
-        processed.add(fullUrl)
+        // Walk up to find the card container
+        let card: HTMLElement | null = link
+        for (let i = 0; i < 5; i++) {
+          if (card?.parentElement) card = card.parentElement
+          else break
+        }
+        const container = card || link
 
-        // Get title from various possible locations
-        const titleEl =
-          card.querySelector('[role="heading"]') ||
-          card.querySelector("h3") ||
-          card.querySelector("h4") ||
-          card.querySelector("span:first-child") ||
-          card.querySelector('[data-ad-preview="title"]') ||
-          card.querySelector('[data-render-location="marketplace_search"] [role="heading"]')
+        // Extract title: look for text content that isn't a price or "Just listed"
+        const allText = container.textContent?.trim() || ""
 
-        // Get price
-        const priceEls = card.querySelectorAll("span")
-        let price = 0
-        for (const el of priceEls) {
+        // Try to find a proper title element
+        const possibleTitles = container.querySelectorAll(
+          'span, div[role="heading"], h3, h4, strong'
+        )
+        let title = ""
+        for (const el of possibleTitles) {
           const text = el.textContent?.trim() || ""
-          const match = text.match(/^\$?([0-9,]+\.?\d*)/)
-          if (match) {
-            price = parseFloat(match[1].replace(/,/g, ""))
-            if (price > 0) break
+          // Skip if it's just a price, "Just listed", or very short
+          if (
+            text.length > 3 &&
+            !text.startsWith("$") &&
+            !text.toLowerCase().includes("just listed") &&
+            !text.toLowerCase().includes("recently listed") &&
+            !text.toLowerCase().includes("unread") &&
+            !/^\$?[\d,]+\.?\d*$/.test(text)
+          ) {
+            title = text
+            break
           }
         }
 
-        // Get image
-        const imgEl = card.querySelector("img")
-        const images = imgEl ? [imgEl.getAttribute("src") || ""].filter(Boolean) : []
+        // Fallback: use the first substantial text from the card
+        if (!title) {
+          for (const el of possibleTitles) {
+            const text = el.textContent?.trim() || ""
+            if (text.length > 3 && !text.startsWith("$")) {
+              title = text
+              break
+            }
+          }
+        }
 
-        const title = titleEl?.textContent?.trim() || ""
+        // Last resort: use text before the price in the card's text content
+        if (!title) {
+          const match = allText.match(/^(.+?)\s+\$/)?.[1]?.trim()
+          if (match && match.length > 3) title = match
+        }
+
+        // Extract price
+        let price = 0
+        const priceMatch = allText.match(/\$([0-9,]+\.?\d*)/)
+        if (priceMatch) {
+          price = parseFloat(priceMatch[1].replace(/,/g, ""))
+        }
+
+        // Extract image
+        const img = container.querySelector("img")
+        const images = img?.getAttribute("src") ? [img.getAttribute("src")!] : []
 
         if (title && price > 0) {
           items.push({
