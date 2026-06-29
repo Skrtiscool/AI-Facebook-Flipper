@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
         quantity: 1,
       }],
       success_url: `${baseUrl}/account?checkout=success`,
-      cancel_url: `${baseUrl}/#pricing`,
+      cancel_url: `${baseUrl}/pricing`,
       metadata: { userId: user.id, plan: planId },
     })
 

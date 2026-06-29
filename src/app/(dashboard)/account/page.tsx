@@ -316,7 +316,7 @@ function SubscriptionCard() {
               Manage Subscription
             </Button>
           ) : (
-            <Button size="sm" className="gap-1" onClick={() => window.location.href = "/#pricing"}>
+            <Button size="sm" className="gap-1" onClick={() => window.location.href = "/pricing"}>
               Upgrade Plan
             </Button>
           )}
