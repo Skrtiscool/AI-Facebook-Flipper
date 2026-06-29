@@ -30,6 +30,7 @@ export async function POST(request: NextRequest) {
         minProfit: body.minProfit ? parseFloat(body.minProfit) : null,
         minScore: body.minScore ? parseInt(body.minScore) : null,
         platforms: body.platforms || ["facebook"],
+        scanInterval: body.scanInterval ? parseInt(body.scanInterval) : 30,
       },
     })
 

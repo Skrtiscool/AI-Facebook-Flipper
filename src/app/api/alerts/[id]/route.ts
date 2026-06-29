@@ -21,6 +21,7 @@ export async function PATCH(
         ...(body.minProfit !== undefined && { minProfit: body.minProfit ? parseFloat(body.minProfit) : null }),
         ...(body.minScore !== undefined && { minScore: body.minScore ? parseInt(body.minScore) : null }),
         ...(body.active !== undefined && { active: body.active }),
+        ...(body.scanInterval !== undefined && { scanInterval: parseInt(body.scanInterval) }),
       },
     })
 
