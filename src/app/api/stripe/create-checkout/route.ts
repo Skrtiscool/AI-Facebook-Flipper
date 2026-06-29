@@ -7,14 +7,15 @@ export async function POST(request: NextRequest) {
   try {
     const user = await ensureUser()
     const body = await request.json()
-    const plan = body.plan as keyof typeof PLANS
+    const planId = body.plan as keyof typeof PLANS
 
-    if (!plan || !PLANS[plan]) {
+    if (!planId || !PLANS[planId]) {
       return NextResponse.json({ error: "Invalid plan" }, { status: 400 })
     }
 
-    if (plan === "free") {
-      // Cancel any existing subscription
+    const plan = PLANS[planId]
+
+    if (planId === "free") {
       const existing = await prisma.subscription.findUnique({ where: { userId: user.id } })
       if (existing?.stripeId) {
         await stripe.subscriptions.cancel(existing.stripeId).catch(() => {})
@@ -27,7 +28,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ url: "/dashboard" })
     }
 
-    // Get or create Stripe customer
     let customerId: string
     const existingSub = await prisma.subscription.findUnique({ where: { userId: user.id } })
     if (existingSub?.stripeCustomerId) {
@@ -42,16 +42,23 @@ export async function POST(request: NextRequest) {
       await prisma.user.update({ where: { id: user.id }, data: { stripeCustomerId: customerId } })
     }
 
-    const priceId = PLANS[plan].priceId
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
 
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: "subscription",
-      line_items: [{ price: priceId, quantity: 1 }],
+      line_items: [{
+        price_data: {
+          currency: "usd",
+          product: plan.productId,
+          recurring: { interval: "month" },
+          unit_amount: Math.round(plan.price * 100),
+        },
+        quantity: 1,
+      }],
       success_url: `${baseUrl}/account?checkout=success`,
-      cancel_url: `${baseUrl}/pricing`,
-      metadata: { userId: user.id, plan },
+      cancel_url: `${baseUrl}/#pricing`,
+      metadata: { userId: user.id, plan: planId },
     })
 
     return NextResponse.json({ url: session.url })

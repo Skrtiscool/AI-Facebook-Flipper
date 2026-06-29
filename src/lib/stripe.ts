@@ -20,6 +20,7 @@ export const PLANS = {
   free: {
     name: "Free",
     price: 0,
+    productId: "",
     scansPerMonth: 10,
     features: [
       "10 scans per month",
@@ -31,7 +32,7 @@ export const PLANS = {
   pro: {
     name: "Pro",
     price: 19.99,
-    priceId: process.env.STRIPE_PRO_PRICE_ID || "",
+    productId: process.env.STRIPE_PRO_PRODUCT_ID || "",
     scansPerMonth: 9999,
     features: [
       "Unlimited scans",
@@ -45,7 +46,7 @@ export const PLANS = {
   biz: {
     name: "Business",
     price: 34.99,
-    priceId: process.env.STRIPE_BIZ_PRICE_ID || "",
+    productId: process.env.STRIPE_BIZ_PRODUCT_ID || "",
     scansPerMonth: 99999,
     features: [
       "Everything in Pro",
