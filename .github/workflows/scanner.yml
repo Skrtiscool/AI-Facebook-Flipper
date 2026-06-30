@@ -33,7 +33,13 @@ jobs:
 
       - run: npm ci
 
-      - name: Install Playwright Chromium
+      - name: Install Google Chrome
+        run: |
+          wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+          sudo dpkg -i google-chrome-stable_current_amd64.deb || sudo apt-get -fy install
+          google-chrome --version
+
+      - name: Install Playwright browsers
         run: npx playwright install chromium
 
       - name: Restore Facebook cookies from cache
@@ -50,11 +56,10 @@ jobs:
           FB_COOKIES: ${{ secrets.FB_COOKIES }}
         run: |
           if [ -n "$FB_COOKIES" ] && [ ! -f .fb-cookies.json ]; then
-            echo "$FB_COOKIES" | base64 -d > .fb-cookies.json
-            echo "Restored cookies from secret"
+            echo "$FB_COOKIES" | base64 -d > .fb-cookies.json 2>/dev/null && echo "Restored cookies from secret" || echo "Invalid FB_COOKIES secret"
           fi
 
-      - name: Facebook Login (if no valid cookies)
+      - name: Facebook Login (headless with stealth)
         env:
           FB_EMAIL: ${{ secrets.FB_EMAIL }}
           FB_PASSWORD: ${{ secrets.FB_PASSWORD }}
