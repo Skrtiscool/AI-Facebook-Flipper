@@ -7,6 +7,7 @@ import { ArrowRight, Sparkles, Check, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
+import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 
 const PRICING_TIERS = [
@@ -72,9 +73,9 @@ export default function PricingPage() {
       })
       const data = await res.json()
       if (data.url) window.location.href = data.url
-      else alert(data.error || "Checkout failed")
+      else toast.error(data.error || "Checkout failed")
     } catch (e: any) {
-      alert("Checkout error: " + e.message)
+      toast.error(e.message || "Checkout error")
     } finally {
       setLoading(null)
     }

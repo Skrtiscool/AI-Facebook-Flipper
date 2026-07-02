@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { usePageTitle } from "@/lib/usePageTitle"
 import { Plus, Trash2, ToggleLeft, ToggleRight, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -22,6 +23,7 @@ interface Alert {
 }
 
 export default function AlertsPage() {
+  usePageTitle("Alerts")
   const [alerts, setAlerts] = useState<Alert[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)

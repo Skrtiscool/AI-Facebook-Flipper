@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { usePageTitle } from "@/lib/usePageTitle"
 import {
   TrendingUp, TrendingDown, DollarSign, Package, Clock,
   ShoppingCart, BadgeDollarSign,
@@ -29,6 +30,7 @@ interface PnLData {
 }
 
 export default function AnalyticsPage() {
+  usePageTitle("Profit & Loss")
   const [data, setData] = useState<PnLData | null>(null)
   const [loading, setLoading] = useState(true)
 

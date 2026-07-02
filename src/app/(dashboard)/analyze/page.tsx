@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { usePageTitle } from "@/lib/usePageTitle"
 import { motion, AnimatePresence } from "framer-motion"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -49,6 +50,7 @@ const conditions = [
 ]
 
 export default function AnalyzePage() {
+  usePageTitle("Analyze Item")
   const [analyzing, setAnalyzing] = useState(false)
   const [result, setResult] = useState<null | {
     estimatedValue: number

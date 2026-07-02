@@ -3,12 +3,15 @@
 import { useState, useEffect } from "react"
 import { User, MessageCircle, Check, X, Loader2, Globe } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { toast } from "sonner"
+import { usePageTitle } from "@/lib/usePageTitle"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 
 export default function AccountPage() {
+  usePageTitle("Account")
   const [webhookUrl, setWebhookUrl] = useState("")
   const [savedWebhook, setSavedWebhook] = useState<string | null>(null)
   const [testing, setTesting] = useState(false)
@@ -62,12 +65,13 @@ export default function AccountPage() {
       const res = await fetch("/api/scanner/auth", { method: "POST" })
       if (res.ok) {
         setFbConnected(true)
+        toast.success("Facebook connected")
       } else {
         const err = await res.json()
-        alert(err.error || "Failed to connect Facebook")
+        toast.error(err.error || "Failed to connect Facebook")
       }
     } catch {
-      alert("Connection failed")
+      toast.error("Connection failed")
     }
     setFbConnecting(false)
   }
@@ -235,7 +239,7 @@ export default function AccountPage() {
           <Button id="push-subscribe-btn" variant="outline" onClick={async () => {
             try {
               const reg = await navigator.serviceWorker?.ready
-              if (!reg) { alert("Service worker not supported"); return }
+              if (!reg) { toast.error("Service worker not supported"); return }
               const sub = await reg.pushManager.subscribe({
                 userVisibleOnly: true,
                 applicationServerKey: urlBase64ToUint8Array("BEl62iUYgUiv0I2K1i64QfJp5KkfVJzXGqYXxVKxYQJQJQJQJQJQJQJQJQJQJQJQJQJQJQJQJQ"),
@@ -245,9 +249,9 @@ export default function AccountPage() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ subscription: sub.toJSON() }),
               })
-              alert("Push notifications enabled!")
+              toast.success("Push notifications enabled!")
             } catch (e: any) {
-              alert(`Push notification error: ${e.message}`)
+              toast.error(e.message || "Push notification error")
             }
           }}>
             Enable Push Notifications

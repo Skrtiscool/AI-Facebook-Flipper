@@ -82,6 +82,7 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.546 0.245 262.881);
+  --animate-shimmer: shimmer 2s ease-in-out infinite;
 }
 
 @layer base {
@@ -119,4 +120,9 @@
 /* Smooth scroll */
 html {
   scroll-behavior: smooth;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }

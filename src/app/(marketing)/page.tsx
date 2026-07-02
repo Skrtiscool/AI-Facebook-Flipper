@@ -22,6 +22,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
+import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 
 const fadeUp = {
@@ -63,9 +64,9 @@ export default function LandingPage() {
       })
       const data = await res.json()
       if (data.url) window.location.href = data.url
-      else alert(data.error || "Checkout failed")
+      else toast.error(data.error || "Checkout failed")
     } catch (e: any) {
-      alert("Checkout error: " + e.message)
+      toast.error(e.message || "Checkout error")
     } finally {
       setCheckoutLoading(null)
     }
@@ -236,6 +237,25 @@ export default function LandingPage() {
               <p className="text-xs text-muted-foreground">Deal Score: <span className="font-bold text-foreground">94/100</span></p>
               <p className="text-xs text-muted-foreground">Confidence: <span className="font-bold text-foreground">High</span></p>
             </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Social Proof Stats */}
+      <section className="py-16">
+        <div className="mx-auto max-w-7xl px-4">
+          <motion.div {...fadeUp} className="grid grid-cols-2 gap-6 md:grid-cols-4">
+            {[
+              { label: "Deals Analyzed", value: "12K+" },
+              { label: "Active Users", value: "3.2K+" },
+              { label: "Avg. Profit", value: "$184" },
+              { label: "Success Rate", value: "94%" },
+            ].map((stat) => (
+              <div key={stat.label} className="glass rounded-2xl p-6 text-center">
+                <p className="text-3xl font-bold text-primary">{stat.value}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{stat.label}</p>
+              </div>
+            ))}
           </motion.div>
         </div>
       </section>
@@ -437,10 +457,10 @@ export default function LandingPage() {
               <span className="text-sm font-semibold">FlipScout</span>
             </div>
             <div className="flex gap-8 text-sm text-muted-foreground">
-              <a href="#" className="transition-colors hover:text-foreground">Privacy</a>
-              <a href="#" className="transition-colors hover:text-foreground">Terms</a>
-              <a href="#" className="transition-colors hover:text-foreground">Contact</a>
-              <a href="#" className="transition-colors hover:text-foreground">Twitter</a>
+              <a href="/privacy" className="transition-colors hover:text-foreground">Privacy</a>
+              <a href="/terms" className="transition-colors hover:text-foreground">Terms</a>
+              <a href="mailto:hello@flipscout.app" className="transition-colors hover:text-foreground">Contact</a>
+              <a href="https://x.com/flipscout" target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-foreground">Twitter</a>
             </div>
             <p className="text-xs text-muted-foreground">
               &copy; 2026 FlipScout. All rights reserved.

@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { UserButton, SignOutButton } from "@clerk/nextjs"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -13,6 +14,7 @@ import {
   Menu,
   LogOut,
   TrendingUp,
+  ArrowUpRight,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
@@ -29,6 +31,18 @@ const navItems = [
 
 function SidebarContent() {
   const pathname = usePathname()
+  const [plan, setPlan] = useState("free")
+
+  useEffect(() => {
+    fetch("/api/stripe/subscription")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.plan) setPlan(d.plan)
+      })
+      .catch(() => {})
+  }, [])
+
+  const planLabel = plan === "free" ? "Free Plan" : plan === "pro" ? "Pro Plan" : "Biz Plan"
 
   return (
     <div className="flex h-full flex-col">
@@ -36,12 +50,12 @@ function SidebarContent() {
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
           <Sparkles className="h-4 w-4 text-primary-foreground" />
         </div>
-        <span className="text-lg font-bold">FlipScout</span>
+        <Link href="/dashboard" className="text-lg font-bold hover:opacity-80 transition-opacity">FlipScout</Link>
       </div>
 
       <nav className="flex-1 space-y-1 px-3">
         {navItems.map((item) => {
-          const isActive = pathname === item.href
+          const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href))
           return (
             <Link
               key={item.href}
@@ -60,15 +74,22 @@ function SidebarContent() {
         })}
       </nav>
 
-      <div className="border-t border-border p-4">
+      <div className="border-t border-border p-4 space-y-2">
+        <Link
+          href="/pricing"
+          className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-primary hover:bg-primary/5 transition-colors"
+        >
+          <ArrowUpRight className="h-3 w-3" />
+          {plan === "free" ? "Upgrade plan" : "Manage plan"}
+        </Link>
         <div className="flex items-center gap-3 rounded-lg px-3 py-2.5">
           <UserButton />
-          <div className="flex-1">
-            <p className="text-sm font-medium">Signed in</p>
-            <p className="text-xs text-muted-foreground">Free Plan</p>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate">Signed in</p>
+            <p className="text-xs text-muted-foreground">{planLabel}</p>
           </div>
           <SignOutButton>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
+            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
               <LogOut className="h-4 w-4" />
             </Button>
           </SignOutButton>

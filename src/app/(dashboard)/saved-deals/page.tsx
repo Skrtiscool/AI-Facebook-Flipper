@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState, useCallback } from "react"
+import { usePageTitle } from "@/lib/usePageTitle"
 import {
   Bookmark, Search, Download, Trash2, MessageCircle, DollarSign,
   ChevronDown, Plus, X, TrendingUp, TrendingDown, Clock,
@@ -114,6 +115,7 @@ const CATEGORIES = [
 const STATUSES = ["watching", "messaged", "bought", "listed", "sold", "passed"]
 
 export default function SavedDealsPage() {
+  usePageTitle("Deal Pipeline")
   const [deals, setDeals] = useState<Deal[]>([])
   const [allDeals, setAllDeals] = useState<Deal[]>([])
   const [loading, setLoading] = useState(true)

@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef } from "react"
 import { motion } from "framer-motion"
+import { toast } from "sonner"
+import { usePageTitle } from "@/lib/usePageTitle"
 import {
   Play,
   Square,
@@ -61,6 +63,7 @@ interface ScanProgress {
 }
 
 export default function DashboardPage() {
+  usePageTitle("Scanner Dashboard")
   const [status, setStatus] = useState<ScannerStatus | null>(null)
   const [deals, setDeals] = useState<Deal[]>([])
   const [loading, setLoading] = useState(true)
@@ -112,16 +115,15 @@ export default function DashboardPage() {
       const res = await fetch(endpoint, { method: "POST" })
       const data = await res.json().catch(() => ({}))
       if (data.setup) {
-        alert(
-          "Scanner runs via GitHub Actions every 30 minutes.\n\n" +
-          "Setup:\n" +
-          data.setup.join("\n")
-        )
+        toast("Scanner runs via GitHub Actions every 30 minutes", {
+          description: data.setup.join("\n"),
+          duration: 8000,
+        })
       } else if (!res.ok) {
-        alert(`Scanner error: ${data.error || "Request failed"}`)
+        toast.error(data.error || "Scanner request failed")
       }
     } catch (e: any) {
-      alert(`Scanner error: ${e.message}`)
+      toast.error(e.message || "Scanner error")
     }
     await fetchData()
     setStarting(false)
