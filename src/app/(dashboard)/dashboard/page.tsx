@@ -7,18 +7,14 @@ import { usePageTitle } from "@/lib/usePageTitle"
 import {
   Play,
   Square,
-  Clock,
   Search,
   TrendingUp,
   Trophy,
   Bell,
   ExternalLink,
   Bookmark,
-  Check,
-  Sparkles,
   Globe,
   Loader2,
-  X,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -58,6 +54,7 @@ interface Deal {
   scannedAt: string
   read: boolean
   saved: boolean
+  condition?: string | null
 }
 
 interface ScanProgress {
