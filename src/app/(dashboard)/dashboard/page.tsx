@@ -31,7 +31,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
-import Link from "next/link"
+
 
 interface ScannerStatus {
   running: boolean
@@ -263,10 +263,13 @@ export default function DashboardPage() {
           <p className="text-[10px] text-muted-foreground flex items-center gap-1"><Trophy className="h-3 w-3" /> Deals</p>
           <p className="text-lg font-bold">{status?.totalDeals ?? 0}</p>
         </div>
-        <Link href="/saved-deals" className="glass rounded-lg px-3 py-2.5 border-0 block transition-colors hover:bg-accent/50 cursor-pointer">
+        <div className="glass rounded-lg px-3 py-2.5 border-0 transition-colors hover:bg-accent/50 cursor-pointer" onClick={() => {
+          const best = deals.reduce((a, b) => a.profit > b.profit ? a : b, deals[0])
+          if (best) setSelectedDeal(best)
+        }}>
           <p className="text-[10px] text-muted-foreground flex items-center gap-1"><TrendingUp className="h-3 w-3" /> Best Profit</p>
           <p className="text-lg font-bold text-emerald-400">${deals.length > 0 ? Math.max(...deals.map((d) => d.profit)).toFixed(0) : 0}</p>
-        </Link>
+        </div>
       </div>
 
       {/* Deals feed */}
